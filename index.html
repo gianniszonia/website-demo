@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KPI Card Website Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="page-shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Website Demo</p>
+        <h1>KPI Card by Ship Mode</h1>
+        <p class="hero-copy">
+          Standalone demo using <strong>Sales</strong> and <strong>Month of Order Date</strong>,
+          automatically split by <strong>Ship Mode</strong>.
+        </p>
+      </div>
+      <div class="hero-note">
+        <span class="status-dot"></span>
+        <span id="dataStatus">Loading sample_-_superstore.xls...</span>
+      </div>
+    </section>
+
+    <section class="controls-card">
+      <div class="controls-header">
+        <div>
+          <p class="controls-label">Filters</p>
+          <h2>Refine the demo</h2>
+        </div>
+      </div>
+
+      <div class="controls-grid">
+        <label class="control-field">
+          <span>Region</span>
+          <select id="regionFilter"></select>
+        </label>
+        <label class="control-field">
+          <span>Segment</span>
+          <select id="segmentFilter"></select>
+        </label>
+        <label class="control-field">
+          <span>Category</span>
+          <select id="categoryFilter"></select>
+        </label>
+      </div>
+    </section>
+
+    <section id="cardsGrid" class="cards-grid"></section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
