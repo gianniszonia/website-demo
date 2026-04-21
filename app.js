@@ -642,8 +642,7 @@
       var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
       var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
       var colors = ["#4996b2", "#22c55e", "#ef4444"];
-      var labelSpacing = Math.min(24, (height - 40) / Math.max(data.length, 1));
-      var labelYStart = cy - ((data.length - 1) * labelSpacing / 2);
+      var vStagger = data.length > 1 ? 20 : 0;
 
       svg.setAttribute("width", "100%");
       svg.setAttribute("height", "100%");
@@ -689,10 +688,12 @@
         });
         svg.appendChild(arc);
 
-        var labelY = Math.round(labelYStart + index * labelSpacing);
+        // Label at arc's left opening (9-o'clock start), vertically staggered
+        var arcLeft = cx - radius;
+        var labelY = Math.round(cy + (index - (data.length - 1) / 2) * vStagger);
 
         var dot = createSvg("circle");
-        dot.setAttribute("cx", "10");
+        dot.setAttribute("cx", String(arcLeft - 4));
         dot.setAttribute("cy", String(labelY));
         dot.setAttribute("r", "4");
         dot.setAttribute("fill", color);
@@ -700,12 +701,12 @@
         svg.appendChild(dot);
 
         var text = createSvg("text");
-        text.setAttribute("x", "20");
+        text.setAttribute("x", String(arcLeft - 12));
         text.setAttribute("y", String(labelY));
-        text.setAttribute("text-anchor", "start");
+        text.setAttribute("text-anchor", "end");
         text.setAttribute("dominant-baseline", "middle");
         text.setAttribute("class", "widget-label");
-        text.setAttribute("font-size", "11");
+        text.setAttribute("font-size", "13");
         text.textContent = item.label + ": " + formatCurrency(item.value);
         svg.appendChild(text);
       });
