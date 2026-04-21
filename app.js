@@ -461,8 +461,8 @@
         var px = Math.round(point.x);
         var py = Math.round(point.y);
         svgContent += '<circle cx="' + px + '" cy="' + py + '" r="4" fill="#4996b2"/>';
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 10) + '" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 10) + '" font-size="10" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 8) + '" font-size="10" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 11) + '" font-size="12" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
         svgContent += '<circle class="line-hit" data-idx="' + points.indexOf(point) + '" cx="' + px + '" cy="' + py + '" r="12" fill="transparent"/>';
       });
 
@@ -526,7 +526,7 @@
 
       var value = document.createElement("span");
       value.className = "bar-val";
-      value.textContent = formatCurrency(item.delta);
+      value.textContent = formatCurrency(item.sales);
       plot.appendChild(value);
 
       var bar = document.createElement("div");
@@ -586,7 +586,11 @@
         var barHeight = Math.max(4, Math.round(bottom - top));
         entry.bar.style.top = top + "px";
         entry.bar.style.height = barHeight + "px";
-        entry.value.style.top = Math.max(0, top - valueHeight - 4) + "px";
+        if (entry.item.delta >= 0) {
+          entry.value.style.top = Math.max(0, top - valueHeight - 4) + "px";
+        } else {
+          entry.value.style.top = (top + barHeight + 4) + "px";
+        }
         entry.value.style.bottom = "auto";
         if (entry.connector) {
           var nextEntry = idx < columns.length - 1 ? columns[idx + 1] : null;
@@ -631,17 +635,18 @@
       var svg = createSvg("svg");
       var stroke = 12;
       var stride = stroke + 12;
-      var cx = Math.round(width * 0.63);
+      var labelAreaW = 120;
+      var outerRadius = Math.min(Math.floor((width - labelAreaW - 16) / 2), Math.floor((height - 24) / 2));
+      var cx = labelAreaW + outerRadius + 8;
       var cy = Math.round(height / 2);
-      var outerRadius = Math.min(width - cx - 8, Math.floor((height - 24) / 2));
       var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
       var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
       var colors = ["#4996b2", "#22c55e", "#ef4444"];
-      var vStagger = data.length > 1 ? 20 : 0;
+      var labelSpacing = Math.min(24, (height - 40) / Math.max(data.length, 1));
+      var labelYStart = cy - ((data.length - 1) * labelSpacing / 2);
 
-      svg.setAttribute("width", width);
-      svg.setAttribute("height", height);
-      svg.setAttribute("style", "width:" + width + "px;height:" + height + "px;display:block");
+      svg.setAttribute("width", "100%");
+      svg.setAttribute("height", "100%");
       svg.setAttribute("viewBox", "0 0 " + width + " " + height);
 
       data.forEach(function (item, index) {
@@ -684,24 +689,23 @@
         });
         svg.appendChild(arc);
 
-        var arcLeftX = cx - radius;
-        var labelY = Math.round(cy + (index - (data.length - 1) / 2) * vStagger);
+        var labelY = Math.round(labelYStart + index * labelSpacing);
 
         var dot = createSvg("circle");
-        dot.setAttribute("cx", String(arcLeftX));
-        dot.setAttribute("cy", String(cy));
-        dot.setAttribute("r", "3");
+        dot.setAttribute("cx", "10");
+        dot.setAttribute("cy", String(labelY));
+        dot.setAttribute("r", "4");
         dot.setAttribute("fill", color);
         dot.setAttribute("pointer-events", "none");
         svg.appendChild(dot);
 
         var text = createSvg("text");
-        text.setAttribute("x", String(arcLeftX - 8));
+        text.setAttribute("x", "20");
         text.setAttribute("y", String(labelY));
-        text.setAttribute("text-anchor", "end");
+        text.setAttribute("text-anchor", "start");
         text.setAttribute("dominant-baseline", "middle");
         text.setAttribute("class", "widget-label");
-        text.setAttribute("font-size", "10");
+        text.setAttribute("font-size", "11");
         text.textContent = item.label + ": " + formatCurrency(item.value);
         svg.appendChild(text);
       });

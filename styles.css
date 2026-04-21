@@ -34,16 +34,15 @@ body {
   background: var(--wrapper-bg);
   color: var(--title-color);
   font-family: var(--font);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  padding: 40px 16px;
+  box-sizing: border-box;
   min-height: 100vh;
 }
 
 .dashboard-shell {
-  width: min(1720px, calc(100% - 32px));
+  width: min(1720px, 100%);
   margin: 0 auto;
-  padding: 40px 0 40px;
+  padding: 0;
 }
 
 .dashboard-header {
@@ -108,7 +107,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-height: 685px;
+  min-height: 580px;
 }
 
 .card-header {
@@ -506,11 +505,11 @@ body {
 
 @media (max-width: 700px) {
   body {
-    align-items: flex-start;
+    padding: 24px 10px;
   }
 
   .dashboard-shell {
-    width: min(100%, calc(100% - 20px));
+    width: 100%;
   }
 
   .filters-row {
