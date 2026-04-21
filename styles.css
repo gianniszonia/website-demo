@@ -33,6 +33,9 @@ body {
   background: var(--wrapper-bg);
   color: var(--title-color);
   font-family: var(--font);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dashboard-shell {
@@ -425,6 +428,9 @@ body {
   font-weight: 600;
   fill: #666666;
   color: #666666;
+  font-family: var(--font);
+  letter-spacing: 0.04em;
+  text-rendering: geometricPrecision;
 }
 
 .w-line {
@@ -497,6 +503,10 @@ body {
 }
 
 @media (max-width: 700px) {
+  body {
+    align-items: flex-start;
+  }
+
   .dashboard-shell {
     width: min(100%, calc(100% - 20px));
   }

@@ -452,7 +452,7 @@
       var pathData = runPath(points);
       var areaData = pathData + " L " + points[points.length - 1].x.toFixed(1) + "," + (height - pad.bottom) + " L " + points[0].x.toFixed(1) + "," + (height - pad.bottom) + " Z";
       var gradientId = "lineGrad" + Math.random().toString(36).slice(2, 8);
-      var svgContent = '<svg viewBox="0 0 ' + width + " " + height + '" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">' +
+      var svgContent = '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + " " + height + '" xmlns="http://www.w3.org/2000/svg">' +
         '<defs><linearGradient id="' + gradientId + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4996b2" stop-opacity="0.28"/><stop offset="100%" stop-color="#4996b2" stop-opacity="0.02"/></linearGradient></defs>' +
         '<path d="' + areaData + '" fill="url(#' + gradientId + ')"/>' +
         '<path d="' + pathData + '" fill="none" stroke="#4996b2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -483,22 +483,33 @@
 
   function renderWaterfallChart(series, mount, endKey) {
     var months = recentMonthsDescending(series, 8)(endKey);
-    var chronological = months.slice().reverse();
-    var running = 0;
-    var varianceSeries = chronological.map(function (month, index) {
-      var previous = index > 0 ? chronological[index - 1].sales : 0;
-      var delta = month.sales - previous;
-      var item = {
+    var fullMonths = series.months;
+    var varianceSeries = months.map(function (month, index) {
+      var absoluteIndex = fullMonths.findIndex(function (item) { return item.key === month.key; });
+      var previous = absoluteIndex > 0 ? fullMonths[absoluteIndex - 1] : null;
+      var isTotal = index === months.length - 1;
+      if (isTotal) {
+        return {
+          key: month.key,
+          date: month.date,
+          sales: month.sales,
+          delta: month.sales,
+          start: 0,
+          end: month.sales,
+          isTotal: true
+        };
+      }
+      var prevSales = previous ? previous.sales : 0;
+      return {
         key: month.key,
         date: month.date,
         sales: month.sales,
-        delta: delta,
-        start: running,
-        end: running + delta
+        delta: month.sales - prevSales,
+        start: prevSales,
+        end: month.sales,
+        isTotal: false
       };
-      running += delta;
-      return item;
-    }).reverse();
+    });
 
     var wrap = document.createElement("div");
     wrap.className = "w-bars-shell";
@@ -525,12 +536,13 @@
 
       var value = document.createElement("span");
       value.className = "bar-val";
-      value.textContent = formatCurrency(item.delta);
+      value.textContent = formatCurrency(item.isTotal ? item.sales : item.delta);
+      value.style.color = "#333333";
       plot.appendChild(value);
 
       var bar = document.createElement("div");
       bar.className = "bar";
-      bar.style.background = item.delta >= 0 ? "#22c55e" : "#ef4444";
+      bar.style.background = item.isTotal ? "#22c55e" : (item.delta >= 0 ? "#22c55e" : "#ef4444");
       bar.style.top = "0px";
       bar.style.height = "0px";
       plot.appendChild(bar);
@@ -542,7 +554,7 @@
       attachTooltip(column, function () {
         return tooltipCard(monthLongLabel(item.date), [
           tooltipRow("Sales", formatCurrencyFull(item.sales)),
-          tooltipRow("Change", formatCurrencyFull(item.delta)),
+          tooltipRow(item.isTotal ? "Total" : "Change", formatCurrencyFull(item.isTotal ? item.sales : item.delta)),
           tooltipRow("vs previous month", formatPercent(getBucketDeltaPct(series.months, monthKey(item.date), 1)))
         ]);
       });
@@ -602,69 +614,78 @@
     }));
     var wrap = document.createElement("div");
     wrap.className = "w-radial";
-    var svg = createSvg("svg");
-    var width = 320;
-    var height = 320;
-    var cx = 180;
-    var cy = 224;
-    var outerRadius = 92;
-    var stroke = 12;
-    var gap = 14;
-    var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
-    var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
-    var colors = ["#4996b2", "#22c55e", "#ef4444"];
-
-    svg.setAttribute("viewBox", "0 0 " + width + " " + height);
-
-    data.forEach(function (item, index) {
-      var radius = outerRadius - index * (stroke + gap);
-      var circumference = 2 * Math.PI * radius;
-      var trackLength = circumference * 0.75;
-      var valueLength = Math.max(0, (item.value / maxValue) * trackLength);
-      var transform = "rotate(-90 " + cx + " " + cy + ")";
-
-      var track = createSvg("circle");
-      track.setAttribute("cx", cx);
-      track.setAttribute("cy", cy);
-      track.setAttribute("r", radius);
-      track.setAttribute("fill", "none");
-      track.setAttribute("stroke", "#eeeeee");
-      track.setAttribute("stroke-width", stroke);
-      track.setAttribute("stroke-dasharray", trackLength.toFixed(2) + " " + circumference.toFixed(2));
-      track.setAttribute("stroke-linecap", "round");
-      track.setAttribute("transform", transform);
-      svg.appendChild(track);
-
-      var arc = createSvg("circle");
-      arc.setAttribute("cx", cx);
-      arc.setAttribute("cy", cy);
-      arc.setAttribute("r", radius);
-      arc.setAttribute("fill", "none");
-      arc.setAttribute("stroke", colors[index % colors.length]);
-      arc.setAttribute("stroke-width", stroke);
-      arc.setAttribute("stroke-dasharray", valueLength.toFixed(2) + " " + circumference.toFixed(2));
-      arc.setAttribute("stroke-linecap", "round");
-      arc.setAttribute("transform", transform);
-      attachTooltip(arc, function () {
-        var selectedMonth = series.months.find(function (month) { return month.key === endKey; });
-        return tooltipCard(dateSpanLabel(selectedMonth && selectedMonth.date, selectedMonth && selectedMonth.date), [
-          tooltipRow("Segment", item.label),
-          tooltipRow("Sales", formatCurrencyFull(item.value)),
-          tooltipRow("% of total", formatPlainPercent((item.value / totalValue) * 100))
-        ]);
-      });
-      svg.appendChild(arc);
-
-      var text = createSvg("text");
-      text.setAttribute("x", "24");
-      text.setAttribute("y", String(68 + index * 22));
-      text.setAttribute("class", "widget-label");
-      text.textContent = item.label + ": " + formatCurrency(item.value);
-      svg.appendChild(text);
-    });
-
-    wrap.appendChild(svg);
     mount.appendChild(wrap);
+
+    requestAnimationFrame(function () {
+      var width = wrap.clientWidth || 320;
+      var height = wrap.clientHeight || 320;
+      var svg = createSvg("svg");
+      var labelWidth = Math.min(140, width * 0.34);
+      var stroke = 12;
+      var gap = 14;
+      var outerRadius = Math.min((width - labelWidth - 32) / 2, (height - 32) / 2);
+      var cx = labelWidth + outerRadius + 16;
+      var cy = height - outerRadius - 16;
+      var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
+      var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
+      var colors = ["#4996b2", "#22c55e", "#ef4444"];
+
+      svg.setAttribute("width", width);
+      svg.setAttribute("height", height);
+      svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+
+      data.forEach(function (item, index) {
+        var radius = outerRadius - index * (stroke + gap);
+        var circumference = 2 * Math.PI * radius;
+        var trackLength = circumference * 0.75;
+        var valueLength = Math.max(0, (item.value / maxValue) * trackLength);
+        var transform = "rotate(-90 " + cx + " " + cy + ")";
+
+        var track = createSvg("circle");
+        track.setAttribute("cx", cx);
+        track.setAttribute("cy", cy);
+        track.setAttribute("r", radius);
+        track.setAttribute("fill", "none");
+        track.setAttribute("stroke", "#eeeeee");
+        track.setAttribute("stroke-width", stroke);
+        track.setAttribute("stroke-dasharray", trackLength.toFixed(2) + " " + circumference.toFixed(2));
+        track.setAttribute("stroke-linecap", "round");
+        track.setAttribute("transform", transform);
+        svg.appendChild(track);
+
+        var arc = createSvg("circle");
+        arc.setAttribute("cx", cx);
+        arc.setAttribute("cy", cy);
+        arc.setAttribute("r", radius);
+        arc.setAttribute("fill", "none");
+        arc.setAttribute("stroke", colors[index % colors.length]);
+        arc.setAttribute("stroke-width", stroke);
+        arc.setAttribute("stroke-dasharray", valueLength.toFixed(2) + " " + circumference.toFixed(2));
+        arc.setAttribute("stroke-linecap", "round");
+        arc.setAttribute("transform", transform);
+        attachTooltip(arc, function () {
+          var selectedMonth = series.months.find(function (month) { return month.key === endKey; });
+          return tooltipCard(dateSpanLabel(selectedMonth && selectedMonth.date, selectedMonth && selectedMonth.date), [
+            tooltipRow("Segment", item.label),
+            tooltipRow("Sales", formatCurrencyFull(item.value)),
+            tooltipRow("% of total", formatPlainPercent((item.value / totalValue) * 100))
+          ]);
+        });
+        svg.appendChild(arc);
+
+        var text = createSvg("text");
+        text.setAttribute("x", "18");
+        text.setAttribute("y", String(cy - radius));
+        text.setAttribute("text-anchor", "start");
+        text.setAttribute("dominant-baseline", "middle");
+        text.setAttribute("class", "widget-label");
+        text.textContent = item.label + ": " + formatCurrency(item.value);
+        svg.appendChild(text);
+      });
+
+      wrap.innerHTML = "";
+      wrap.appendChild(svg);
+    });
   }
 
   function renderFunnelChart(series, mount, endKey) {
