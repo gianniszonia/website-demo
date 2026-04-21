@@ -452,16 +452,18 @@
       var pathData = runPath(points);
       var areaData = pathData + " L " + points[points.length - 1].x.toFixed(1) + "," + (height - pad.bottom) + " L " + points[0].x.toFixed(1) + "," + (height - pad.bottom) + " Z";
       var gradientId = "lineGrad" + Math.random().toString(36).slice(2, 8);
-      var svgContent = '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + " " + height + '" xmlns="http://www.w3.org/2000/svg">' +
+      var svgContent = '<svg width="100%" height="100%" viewBox="0 0 ' + width + " " + height + '" xmlns="http://www.w3.org/2000/svg">' +
         '<defs><linearGradient id="' + gradientId + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4996b2" stop-opacity="0.28"/><stop offset="100%" stop-color="#4996b2" stop-opacity="0.02"/></linearGradient></defs>' +
         '<path d="' + areaData + '" fill="url(#' + gradientId + ')"/>' +
         '<path d="' + pathData + '" fill="none" stroke="#4996b2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
 
       points.forEach(function (point) {
-        svgContent += '<circle cx="' + point.x.toFixed(1) + '" cy="' + point.y.toFixed(1) + '" r="4" fill="#4996b2"/>';
-        svgContent += '<text class="widget-label" x="' + point.x.toFixed(1) + '" y="' + (height - 10) + '" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
-        svgContent += '<text class="widget-label" x="' + point.x.toFixed(1) + '" y="' + (point.y - 8).toFixed(1) + '" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
-        svgContent += '<circle class="line-hit" data-idx="' + points.indexOf(point) + '" cx="' + point.x.toFixed(1) + '" cy="' + point.y.toFixed(1) + '" r="12" fill="transparent"/>';
+        var px = Math.round(point.x);
+        var py = Math.round(point.y);
+        svgContent += '<circle cx="' + px + '" cy="' + py + '" r="4" fill="#4996b2"/>';
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 10) + '" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 8) + '" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
+        svgContent += '<circle class="line-hit" data-idx="' + points.indexOf(point) + '" cx="' + px + '" cy="' + py + '" r="12" fill="transparent"/>';
       });
 
       svgContent += "</svg>";
@@ -604,7 +606,7 @@
             var next = columns[idx + 1];
             var currentLevel = topPad + ((maxValue - entry.item.end) * unit);
             entry.connector.style.top = currentLevel + "px";
-            entry.connector.style.width = Math.max(0, entry.plot.clientWidth * 0.2) + "px";
+            entry.connector.style.width = Math.max(0, entry.plot.clientWidth * 0.2 + 8) + "px";
           } else {
             entry.connector.style.width = "0";
           }
@@ -645,13 +647,15 @@
       var gap = 14;
       var outerRadius = Math.min((width - labelWidth - 20) / 2, (height - 24) / 2);
       var cx = labelWidth + outerRadius + 8;
-      var cy = height - outerRadius - 8;
+      var cy = height / 2;
       var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
       var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
       var colors = ["#4996b2", "#22c55e", "#ef4444"];
+      var labelSpacing = Math.min(26, (height - 40) / Math.max(data.length, 1));
+      var labelYStart = cy - ((data.length - 1) * labelSpacing / 2);
 
-      svg.setAttribute("width", width);
-      svg.setAttribute("height", height);
+      svg.setAttribute("width", "100%");
+      svg.setAttribute("height", "100%");
       svg.setAttribute("viewBox", "0 0 " + width + " " + height);
 
       data.forEach(function (item, index) {
@@ -695,7 +699,7 @@
 
         var text = createSvg("text");
         text.setAttribute("x", "16");
-        text.setAttribute("y", String(88 + index * 26));
+        text.setAttribute("y", String(Math.round(labelYStart + index * labelSpacing)));
         text.setAttribute("text-anchor", "start");
         text.setAttribute("dominant-baseline", "middle");
         text.setAttribute("class", "widget-label");
@@ -782,7 +786,7 @@
         text.setAttribute("dominant-baseline", "middle");
         text.setAttribute("font-size", "10");
         text.setAttribute("font-weight", "600");
-        text.setAttribute("fill", "#ffffff");
+        text.setAttribute("fill", "#333333");
         text.textContent = item.label + " | " + formatCurrency(item.value);
         svg.appendChild(text);
       });
