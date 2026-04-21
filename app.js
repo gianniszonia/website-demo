@@ -642,7 +642,7 @@
       var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
       var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
       var colors = ["#4996b2", "#22c55e", "#ef4444"];
-      var vStagger = data.length > 1 ? 20 : 0;
+      var vStagger = data.length > 1 ? 22 : 0;
 
       svg.setAttribute("width", "100%");
       svg.setAttribute("height", "100%");
@@ -688,12 +688,14 @@
         });
         svg.appendChild(arc);
 
-        // Label at arc's left opening (9-o'clock start), vertically staggered
+        // Label at arc's left opening — dot placed outside the stroke, text to its left
         var arcLeft = cx - radius;
         var labelY = Math.round(cy + (index - (data.length - 1) / 2) * vStagger);
+        // stroke extends stroke/2 px outward from path; add 10px clear gap beyond that
+        var dotCx = Math.round(arcLeft - stroke / 2 - 10);
 
         var dot = createSvg("circle");
-        dot.setAttribute("cx", String(arcLeft - 4));
+        dot.setAttribute("cx", String(dotCx));
         dot.setAttribute("cy", String(labelY));
         dot.setAttribute("r", "4");
         dot.setAttribute("fill", color);
@@ -701,7 +703,7 @@
         svg.appendChild(dot);
 
         var text = createSvg("text");
-        text.setAttribute("x", String(arcLeft - 12));
+        text.setAttribute("x", String(dotCx - 8));
         text.setAttribute("y", String(labelY));
         text.setAttribute("text-anchor", "end");
         text.setAttribute("dominant-baseline", "middle");
