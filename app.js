@@ -483,8 +483,8 @@
         var px = Math.round(point.x);
         var py = Math.round(point.y);
         svgContent += '<circle cx="' + px + '" cy="' + py + '" r="4" fill="#4996b2"/>';
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 8) + '" font-size="15" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 18) + '" font-size="22" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
+        svgContent += '<text class="line-axis-label" x="' + px + '" y="' + (height - 8) + '" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
+        svgContent += '<text class="line-value-label" x="' + px + '" y="' + Math.round(point.y - 18) + '" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
         svgContent += '<circle class="line-hit" data-idx="' + points.indexOf(point) + '" cx="' + px + '" cy="' + py + '" r="12" fill="transparent"/>';
       });
 
@@ -661,7 +661,7 @@
       var outerRadius = Math.min(Math.floor((width - labelAreaW - 32) / 2), Math.floor((height - 24) / 2));
       var layoutWidth = labelAreaW + (outerRadius * 2);
       var layoutLeft = Math.max(12, Math.round((width - layoutWidth) / 2));
-      var cx = layoutLeft + labelAreaW + outerRadius - 34;
+      var cx = layoutLeft + labelAreaW + outerRadius - 50;
       var cy = Math.round(height / 2);
       var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
       var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
@@ -730,8 +730,7 @@
         text.setAttribute("y", String(labelY));
         text.setAttribute("text-anchor", "end");
         text.setAttribute("dominant-baseline", "middle");
-        text.setAttribute("class", "widget-label");
-        text.setAttribute("font-size", "20");
+        text.setAttribute("class", "radial-label");
         text.textContent = item.label + ": " + formatCurrency(item.value);
         svg.appendChild(text);
       });

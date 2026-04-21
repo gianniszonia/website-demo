@@ -436,6 +436,39 @@ body {
   shape-rendering: geometricPrecision;
 }
 
+.line-axis-label {
+  font-size: 15px;
+  font-weight: 600;
+  fill: #666666;
+  font-family: var(--font);
+  letter-spacing: 0.04em;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  shape-rendering: geometricPrecision;
+}
+
+.line-value-label {
+  font-size: 22px;
+  font-weight: 700;
+  fill: #666666;
+  font-family: var(--font);
+  letter-spacing: 0;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  shape-rendering: geometricPrecision;
+}
+
+.radial-label {
+  font-size: 20px;
+  font-weight: 700;
+  fill: #666666;
+  font-family: var(--font);
+  letter-spacing: 0;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  shape-rendering: geometricPrecision;
+}
+
 .w-line {
   flex: 1 1 auto;
   min-height: 0;
