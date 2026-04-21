@@ -24,6 +24,7 @@
   var regionFilterEl = document.getElementById("regionFilter");
   var categoryFilterEl = document.getElementById("categoryFilter");
   var subCategoryFilterEl = document.getElementById("subCategoryFilter");
+  var monthFilterEl = document.getElementById("monthFilter");
   var cardsGridEl = document.getElementById("cardsGrid");
   var tooltipEl = document.getElementById("chartTooltip");
 
@@ -34,7 +35,15 @@
       if (parsed) return new Date(parsed.y, parsed.m - 1, parsed.d);
     }
     if (typeof value === "string" && value.trim()) {
-      var normalized = new Date(value);
+      var trimmed = value.trim();
+      var parts = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if (parts) {
+        var year = Number(parts[3]);
+        if (year < 100) year += 2000;
+        var manual = new Date(year, Number(parts[1]) - 1, Number(parts[2]));
+        if (!isNaN(manual.getTime())) return manual;
+      }
+      var normalized = new Date(trimmed);
       if (!isNaN(normalized.getTime())) return normalized;
     }
     return null;
@@ -67,6 +76,11 @@
     return (rounded > 0 ? "+" : "") + rounded + "%";
   }
 
+  function formatPlainPercent(value) {
+    if (value === null || !isFinite(value)) return "-";
+    return Math.round(value) + "%";
+  }
+
   function escapeHtml(value) {
     return String(value)
       .replace(/&/g, "&amp;")
@@ -92,6 +106,32 @@
     return date.toLocaleString("en-US", { month: "short" }) + " " + String(date.getFullYear()).slice(-2);
   }
 
+  function monthFilterLabel(date) {
+    return date.toLocaleString("en-US", { month: "long" }) + "-" + String(date.getFullYear()).slice(-2);
+  }
+
+  function dateSpanLabel(startDate, endDate) {
+    if (!startDate && !endDate) return "";
+    if (!startDate || !endDate || monthKey(startDate) === monthKey(endDate)) return monthLongLabel(endDate || startDate);
+    return monthLongLabel(startDate) + " - " + monthLongLabel(endDate);
+  }
+
+  function tooltipRow(label, value, note) {
+    var row = '<div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">';
+    row += '<span class="tt-label">' + escapeHtml(label) + ":</span>";
+    row += '<span style="font-weight:600">' + escapeHtml(value) + "</span>";
+    if (note) row += '<span class="tt-label">(' + escapeHtml(note) + ")</span>";
+    row += "</div>";
+    return row;
+  }
+
+  function tooltipCard(title, rows) {
+    return '<div style="font-size:12px">' +
+      '<div style="margin-bottom:4px;font-weight:600">' + escapeHtml(title) + "</div>" +
+      rows.join("") +
+      "</div>";
+  }
+
   function populateFilter(selectEl, values, label) {
     selectEl.innerHTML = "";
     var allOption = document.createElement("option");
@@ -103,6 +143,17 @@
       option.value = value;
       option.textContent = value;
       selectEl.appendChild(option);
+    });
+  }
+
+  function populateMonthFilter(months, selectedKey) {
+    monthFilterEl.innerHTML = "";
+    months.slice().reverse().forEach(function (month) {
+      var option = document.createElement("option");
+      option.value = month.key;
+      option.textContent = monthFilterLabel(month.date);
+      if (month.key === selectedKey) option.selected = true;
+      monthFilterEl.appendChild(option);
     });
   }
 
@@ -126,7 +177,7 @@
       });
   }
 
-  function getFilteredRows() {
+  function getBaseFilteredRows() {
     return state.rows.filter(function (row) {
       if (regionFilterEl.value && row.Region !== regionFilterEl.value) return false;
       if (categoryFilterEl.value && row.Category !== categoryFilterEl.value) return false;
@@ -135,25 +186,46 @@
     });
   }
 
-  function buildMonthlyData(rows) {
+  function buildGlobalMonths(rows) {
+    if (!rows.length) return [];
+    var minDate = rows[0].orderDate;
+    var maxDate = rows[0].orderDate;
+    rows.forEach(function (row) {
+      if (row.orderDate < minDate) minDate = row.orderDate;
+      if (row.orderDate > maxDate) maxDate = row.orderDate;
+    });
+    var cursor = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    var end = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+    var months = [];
+    while (cursor <= end) {
+      months.push({
+        key: monthKey(cursor),
+        date: new Date(cursor.getFullYear(), cursor.getMonth(), 1)
+      });
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+    }
+    return months;
+  }
+
+  function buildMonthlyData(rows, globalMonths) {
     var byMonth = new Map();
+    globalMonths.forEach(function (month) {
+      byMonth.set(month.key, {
+        key: month.key,
+        date: new Date(month.date.getFullYear(), month.date.getMonth(), 1),
+        sales: 0
+      });
+    });
     rows.forEach(function (row) {
       var key = monthKey(row.orderDate);
-      if (!byMonth.has(key)) {
-        byMonth.set(key, {
-          key: key,
-          date: new Date(row.orderDate.getFullYear(), row.orderDate.getMonth(), 1),
-          sales: 0
-        });
-      }
-      byMonth.get(key).sales += row.sales;
+      if (byMonth.has(key)) byMonth.get(key).sales += row.sales;
     });
-    return Array.from(byMonth.values()).sort(function (a, b) {
-      return a.date - b.date;
+    return globalMonths.map(function (month) {
+      return byMonth.get(month.key);
     });
   }
 
-  function buildShipModeSeries(rows) {
+  function buildShipModeSeries(rows, globalMonths) {
     var byShipMode = new Map();
     rows.forEach(function (row) {
       if (!byShipMode.has(row.ShipMode)) byShipMode.set(row.ShipMode, []);
@@ -164,7 +236,7 @@
         return {
           shipMode: entry[0],
           rows: entry[1],
-          months: buildMonthlyData(entry[1])
+          months: buildMonthlyData(entry[1], globalMonths)
         };
       })
       .sort(function (a, b) {
@@ -174,10 +246,12 @@
       });
   }
 
-  function buildSummary(series) {
+  function buildSummary(series, endKey) {
     if (!series.months.length) return null;
-    var selected = series.months[series.months.length - 1];
-    var previousMonth = series.months.length > 1 ? series.months[series.months.length - 2] : null;
+    var selectedIndex = series.months.findIndex(function (month) { return month.key === endKey; });
+    if (selectedIndex < 0) return null;
+    var selected = series.months[selectedIndex];
+    var previousMonth = selectedIndex > 0 ? series.months[selectedIndex - 1] : null;
     var byKey = {};
     series.months.forEach(function (month) {
       byKey[month.key] = month;
@@ -194,13 +268,13 @@
     };
   }
 
-  function tooltipHtml(label, value, extra) {
-    var lines = [
-      '<div class="tt-label">' + escapeHtml(label) + "</div>",
-      "<div>" + escapeHtml(value) + "</div>"
-    ];
-    if (extra) lines.push('<div class="tt-label">' + escapeHtml(extra) + "</div>");
-    return lines.join("");
+  function getBucketDeltaPct(months, currentKey, periodsBack) {
+    var idx = months.findIndex(function (month) { return month.key === currentKey; });
+    if (idx < 0 || idx < periodsBack) return null;
+    var prev = months[idx - periodsBack];
+    var curr = months[idx];
+    if (!prev || !curr || prev.sales === 0) return null;
+    return ((curr.sales - prev.sales) / Math.abs(prev.sales)) * 100;
   }
 
   function showTooltip(event, html) {
@@ -264,16 +338,21 @@
   }
 
   function recentMonthsDescending(series, count) {
-    return series.months.slice(-count).reverse();
+    return function (endKey) {
+      var endIndex = series.months.findIndex(function (month) { return month.key === endKey; });
+      if (endIndex < 0) return [];
+      return series.months.slice(Math.max(0, endIndex - count + 1), endIndex + 1).reverse();
+    };
   }
 
-  function renderBarChart(series, mount) {
-    var months = recentMonthsDescending(series, 8);
+  function renderBarChart(series, mount, endKey) {
+    var months = recentMonthsDescending(series, 8)(endKey);
     var wrap = document.createElement("div");
     wrap.className = "w-bars-shell";
     var chart = document.createElement("div");
     chart.className = "w-bars";
     var maxValue = Math.max.apply(null, months.map(function (month) { return month.sales; }).concat([1]));
+    var columns = [];
 
     months.forEach(function (month) {
       var column = document.createElement("div");
@@ -290,8 +369,8 @@
       var bar = document.createElement("div");
       bar.className = "bar";
       bar.style.background = "#4d97b2";
-      bar.style.top = Math.max(0, 240 - Math.max(8, Math.round((month.sales / maxValue) * 240))) + "px";
-      bar.style.height = Math.max(8, Math.round((month.sales / maxValue) * 240)) + "px";
+      bar.style.top = "0px";
+      bar.style.height = "0px";
       plot.appendChild(bar);
 
       var label = document.createElement("span");
@@ -299,20 +378,43 @@
       label.textContent = monthShortLabel(month.date);
 
       attachTooltip(column, function () {
-        return tooltipHtml(monthLongLabel(month.date), formatCurrencyFull(month.sales));
+        return tooltipCard(monthLongLabel(month.date), [
+          tooltipRow("Sales", formatCurrencyFull(month.sales)),
+          tooltipRow("vs previous month", formatPercent(getBucketDeltaPct(series.months, month.key, 1))),
+          tooltipRow("vs previous year", formatPercent(getBucketDeltaPct(series.months, month.key, 12)))
+        ]);
       });
 
       column.appendChild(plot);
       column.appendChild(label);
       chart.appendChild(column);
+      columns.push({ plot: plot, value: value, bar: bar, month: month });
     });
 
     wrap.appendChild(chart);
     mount.appendChild(wrap);
+
+    requestAnimationFrame(function () {
+      var chartHeight = chart.clientHeight || 320;
+      var valueHeight = 18;
+      var monthHeight = 18;
+      var plotHeight = Math.max(chartHeight - monthHeight - 8, 120);
+      var topPad = valueHeight + 8;
+      var usableHeight = Math.max(plotHeight - topPad - 8, 40);
+      columns.forEach(function (item) {
+        item.plot.style.height = plotHeight + "px";
+        var barHeight = Math.max(4, Math.round((item.month.sales / maxValue) * usableHeight));
+        var top = topPad + (usableHeight - barHeight);
+        item.bar.style.top = top + "px";
+        item.bar.style.height = barHeight + "px";
+        item.value.style.top = Math.max(0, top - valueHeight - 4) + "px";
+        item.value.style.bottom = "auto";
+      });
+    });
   }
 
-  function renderLineChart(series, mount) {
-    var months = recentMonthsDescending(series, 8);
+  function renderLineChart(series, mount, endKey) {
+    var months = recentMonthsDescending(series, 8)(endKey);
     var wrap = document.createElement("div");
     wrap.className = "w-line";
     mount.appendChild(wrap);
@@ -369,14 +471,18 @@
         var idx = parseInt(hit.getAttribute("data-idx"), 10);
         var point = points[idx];
         attachTooltip(hit, function () {
-          return tooltipHtml(monthLongLabel(point.month.date), formatCurrencyFull(point.month.sales));
+          return tooltipCard(dateSpanLabel(point.month.date, point.month.date), [
+            tooltipRow("Sales", formatCurrencyFull(point.month.sales)),
+            tooltipRow("vs previous month", formatPercent(getBucketDeltaPct(series.months, point.month.key, 1))),
+            tooltipRow("vs previous year", formatPercent(getBucketDeltaPct(series.months, point.month.key, 12)))
+          ]);
         });
       });
     });
   }
 
-  function renderWaterfallChart(series, mount) {
-    var months = recentMonthsDescending(series, 8);
+  function renderWaterfallChart(series, mount, endKey) {
+    var months = recentMonthsDescending(series, 8)(endKey);
     var changes = months.map(function (month, index) {
       var nextMonth = months[index + 1];
       return {
@@ -407,8 +513,8 @@
       var bar = document.createElement("div");
       bar.className = "bar";
       bar.style.background = item.delta >= 0 ? "#22c55e" : "#ef4444";
-      bar.style.top = Math.max(0, 240 - Math.max(8, Math.round((Math.abs(item.delta) / maxValue) * 240))) + "px";
-      bar.style.height = Math.max(8, Math.round((Math.abs(item.delta) / maxValue) * 240)) + "px";
+      bar.style.top = "0px";
+      bar.style.height = "0px";
       plot.appendChild(bar);
 
       var label = document.createElement("span");
@@ -416,20 +522,40 @@
       label.textContent = monthShortLabel(item.date);
 
       attachTooltip(column, function () {
-        return tooltipHtml(
-          monthLongLabel(item.date),
-          "Change: " + formatCurrencyFull(item.delta),
-          "Sales: " + formatCurrencyFull(item.sales)
-        );
+        return tooltipCard(monthLongLabel(item.date), [
+          tooltipRow("Sales", formatCurrencyFull(item.sales)),
+          tooltipRow("Change", formatCurrencyFull(item.delta)),
+          tooltipRow("vs previous month", formatPercent(getBucketDeltaPct(series.months, monthKey(item.date), 1)))
+        ]);
       });
 
       column.appendChild(plot);
       column.appendChild(label);
       chart.appendChild(column);
+      column.__wf = { plot: plot, value: value, bar: bar, item: item };
     });
 
     wrap.appendChild(chart);
     mount.appendChild(wrap);
+
+    requestAnimationFrame(function () {
+      var columns = Array.prototype.slice.call(chart.children).map(function (child) { return child.__wf; }).filter(Boolean);
+      var chartHeight = chart.clientHeight || 320;
+      var valueHeight = 18;
+      var monthHeight = 18;
+      var plotHeight = Math.max(chartHeight - monthHeight - 8, 120);
+      var topPad = valueHeight + 8;
+      var usableHeight = Math.max(plotHeight - topPad - 8, 40);
+      columns.forEach(function (entry) {
+        entry.plot.style.height = plotHeight + "px";
+        var barHeight = Math.max(4, Math.round((Math.abs(entry.item.delta) / maxValue) * usableHeight));
+        var top = topPad + (usableHeight - barHeight);
+        entry.bar.style.top = top + "px";
+        entry.bar.style.height = barHeight + "px";
+        entry.value.style.top = Math.max(0, top - valueHeight - 4) + "px";
+        entry.value.style.bottom = "auto";
+      });
+    });
   }
 
   function aggregateBySegment(rows) {
@@ -447,8 +573,10 @@
       });
   }
 
-  function renderRadialChart(series, mount) {
-    var data = aggregateBySegment(series.rows);
+  function renderRadialChart(series, mount, endKey) {
+    var data = aggregateBySegment(series.rows.filter(function (row) {
+      return monthKey(row.orderDate) === endKey;
+    }));
     var wrap = document.createElement("div");
     wrap.className = "w-radial";
     var svg = createSvg("svg");
@@ -460,6 +588,7 @@
     var stroke = 12;
     var gap = 14;
     var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
+    var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
     var colors = ["#4996b2", "#22c55e", "#ef4444"];
 
     svg.setAttribute("viewBox", "0 0 " + width + " " + height);
@@ -494,7 +623,12 @@
       arc.setAttribute("stroke-linecap", "round");
       arc.setAttribute("transform", transform);
       attachTooltip(arc, function () {
-        return tooltipHtml(item.label, formatCurrencyFull(item.value));
+        var selectedMonth = series.months.find(function (month) { return month.key === endKey; });
+        return tooltipCard(dateSpanLabel(selectedMonth && selectedMonth.date, selectedMonth && selectedMonth.date), [
+          tooltipRow("Segment", item.label),
+          tooltipRow("Sales", formatCurrencyFull(item.value)),
+          tooltipRow("% of total", formatPlainPercent((item.value / totalValue) * 100))
+        ]);
       });
       svg.appendChild(arc);
 
@@ -512,8 +646,10 @@
     mount.appendChild(wrap);
   }
 
-  function renderFunnelChart(series, mount) {
-    var data = aggregateBySegment(series.rows);
+  function renderFunnelChart(series, mount, endKey) {
+    var data = aggregateBySegment(series.rows.filter(function (row) {
+      return monthKey(row.orderDate) === endKey;
+    }));
     var wrap = document.createElement("div");
     wrap.className = "w-funnel";
     mount.appendChild(wrap);
@@ -568,11 +704,12 @@
         path.setAttribute("stroke-width", "1.5");
         path.setAttribute("stroke-linejoin", "round");
         attachTooltip(path, function () {
-          return tooltipHtml(
-            item.label,
-            formatCurrencyFull(item.value),
-            Math.round((item.value / maxValue) * 100) + "% of top stage"
-          );
+          var selectedMonth = series.months.find(function (month) { return month.key === endKey; });
+          return tooltipCard(dateSpanLabel(selectedMonth && selectedMonth.date, selectedMonth && selectedMonth.date), [
+            tooltipRow("Stage", item.label),
+            tooltipRow("Sales", formatCurrencyFull(item.value)),
+            tooltipRow("% of first", Math.round((item.value / maxValue) * 100) + "%")
+          ]);
         });
         svg.appendChild(path);
 
@@ -593,12 +730,12 @@
     });
   }
 
-  function renderWidgetByPage(series, mount) {
-    if (state.currentPage === 0) return renderBarChart(series, mount);
-    if (state.currentPage === 1) return renderLineChart(series, mount);
-    if (state.currentPage === 2) return renderWaterfallChart(series, mount);
-    if (state.currentPage === 3) return renderRadialChart(series, mount);
-    return renderFunnelChart(series, mount);
+  function renderWidgetByPage(series, mount, endKey) {
+    if (state.currentPage === 0) return renderBarChart(series, mount, endKey);
+    if (state.currentPage === 1) return renderLineChart(series, mount, endKey);
+    if (state.currentPage === 2) return renderWaterfallChart(series, mount, endKey);
+    if (state.currentPage === 3) return renderRadialChart(series, mount, endKey);
+    return renderFunnelChart(series, mount, endKey);
   }
 
   function buildPager(card) {
@@ -639,8 +776,8 @@
     card.appendChild(pager);
   }
 
-  function renderCard(series) {
-    var summary = buildSummary(series);
+  function renderCard(series, endKey) {
+    var summary = buildSummary(series, endKey);
     if (!summary) return null;
 
     var card = document.createElement("article");
@@ -694,7 +831,7 @@
 
       var chartSlot = document.createElement("div");
       chartSlot.className = "widget-slot chart-slot";
-      if (pageIndex === state.currentPage) renderWidgetByPage(series, chartSlot);
+      if (pageIndex === state.currentPage) renderWidgetByPage(series, chartSlot, endKey);
 
       pageEl.appendChild(summarySlot);
       pageEl.appendChild(chartSlot);
@@ -710,15 +847,30 @@
 
   function render() {
     hideTooltip();
-    var filteredRows = getFilteredRows();
-    var seriesList = buildShipModeSeries(filteredRows);
+    var filteredRows = getBaseFilteredRows();
+    var globalMonths = buildGlobalMonths(filteredRows);
     cardsGridEl.innerHTML = "";
+    if (!globalMonths.length) {
+      cardsGridEl.innerHTML = '<div class="empty-state">No data matches the current filters.</div>';
+      return;
+    }
+    if (!state.currentEndKey || !globalMonths.some(function (month) { return month.key === state.currentEndKey; })) {
+      state.currentEndKey = globalMonths[globalMonths.length - 1].key;
+    }
+    populateMonthFilter(globalMonths, state.currentEndKey);
+    var cutoffRows = filteredRows.filter(function (row) {
+      return monthKey(row.orderDate) <= state.currentEndKey;
+    });
+    var activeMonths = globalMonths.filter(function (month) {
+      return month.key <= state.currentEndKey;
+    });
+    var seriesList = buildShipModeSeries(cutoffRows, activeMonths);
     if (!seriesList.length) {
       cardsGridEl.innerHTML = '<div class="empty-state">No data matches the current filters.</div>';
       return;
     }
     seriesList.forEach(function (series) {
-      var card = renderCard(series);
+      var card = renderCard(series, state.currentEndKey);
       if (card) cardsGridEl.appendChild(card);
     });
   }
@@ -731,6 +883,10 @@
     [regionFilterEl, categoryFilterEl, subCategoryFilterEl].forEach(function (el) {
       el.addEventListener("change", render);
     });
+    monthFilterEl.addEventListener("change", function () {
+      state.currentEndKey = monthFilterEl.value;
+      render();
+    });
   }
 
   function loadWorkbook() {
@@ -740,7 +896,7 @@
         return response.arrayBuffer();
       })
       .then(function (buffer) {
-        var workbook = XLSX.read(buffer, { type: "array" });
+        var workbook = XLSX.read(buffer, { type: "array", cellDates: true });
         var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         var rawRows = XLSX.utils.sheet_to_json(firstSheet, {
           raw: true,

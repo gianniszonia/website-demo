@@ -1,14 +1,14 @@
 :root {
-  --bg: #f7f8fb;
+  --bg: #ffffff;
   --wrapper-bg: #f7f8fb;
   --card-bg: #ffffff;
   --font: "DM Sans", sans-serif;
   --metric-accent: #4996b2;
   --divider-color: #eeeeee;
-  --label-size: 18px;
+  --label-size: 15px;
   --title-color: #333333;
   --card-radius: 20px;
-  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --card-shadow: 0 2px 5px rgba(0, 0, 0, 0.10);
   --pagination-color: #666666;
   --pagination-size: 14px;
   --dp: #22c55e;
@@ -38,7 +38,7 @@ body {
 .dashboard-shell {
   width: min(1720px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 18px 0 28px;
+  padding: 15px 0 28px;
 }
 
 .dashboard-header {
@@ -62,7 +62,7 @@ body {
 
 .filters-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -90,8 +90,8 @@ body {
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
 }
 
 .card {
@@ -362,6 +362,11 @@ body {
   flex: 1;
   min-width: 0;
   max-width: 64px;
+  cursor: pointer;
+}
+
+.bar-col:hover .bar {
+  filter: brightness(1.1);
 }
 
 .bar-val {
@@ -373,6 +378,7 @@ body {
   bottom: 0;
   z-index: 3;
   pointer-events: none;
+  transition: top 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .bar-plot {
@@ -394,6 +400,7 @@ body {
   z-index: 1;
   border-radius: 5px;
   background: #4996b2;
+  transition: top 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .bar-month {
