@@ -419,7 +419,7 @@
     wrap.className = "w-line";
     mount.appendChild(wrap);
 
-    requestAnimationFrame(function () {
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
       var width = wrap.clientWidth || 360;
       var height = wrap.clientHeight || 320;
       var pad = { top: 24, right: 18, bottom: 34, left: 28 };
@@ -452,7 +452,7 @@
       var pathData = runPath(points);
       var areaData = pathData + " L " + points[points.length - 1].x.toFixed(1) + "," + (height - pad.bottom) + " L " + points[0].x.toFixed(1) + "," + (height - pad.bottom) + " Z";
       var gradientId = "lineGrad" + Math.random().toString(36).slice(2, 8);
-      var svgContent = '<svg width="100%" height="100%" viewBox="0 0 ' + width + " " + height + '" xmlns="http://www.w3.org/2000/svg">' +
+      var svgContent = '<svg width="' + width + '" height="' + height + '" style="width:' + width + 'px;height:' + height + 'px;display:block" viewBox="0 0 ' + width + " " + height + '" xmlns="http://www.w3.org/2000/svg">' +
         '<defs><linearGradient id="' + gradientId + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4996b2" stop-opacity="0.28"/><stop offset="100%" stop-color="#4996b2" stop-opacity="0.02"/></linearGradient></defs>' +
         '<path d="' + areaData + '" fill="url(#' + gradientId + ')"/>' +
         '<path d="' + pathData + '" fill="none" stroke="#4996b2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -461,8 +461,8 @@
         var px = Math.round(point.x);
         var py = Math.round(point.y);
         svgContent += '<circle cx="' + px + '" cy="' + py + '" r="4" fill="#4996b2"/>';
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 10) + '" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 8) + '" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 10) + '" font-size="11" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 10) + '" font-size="11" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
         svgContent += '<circle class="line-hit" data-idx="' + points.indexOf(point) + '" cx="' + px + '" cy="' + py + '" r="12" fill="transparent"/>';
       });
 
@@ -480,7 +480,7 @@
           ]);
         });
       });
-    });
+    }); });
   }
 
   function renderWaterfallChart(series, mount, endKey) {
@@ -602,8 +602,8 @@
         entry.value.style.top = Math.max(0, top - valueHeight - 4) + "px";
         entry.value.style.bottom = "auto";
         if (entry.connector) {
-          if (idx < columns.length - 1 && !entry.item.isTotal) {
-            var next = columns[idx + 1];
+          var nextEntry = idx < columns.length - 1 ? columns[idx + 1] : null;
+          if (nextEntry && !entry.item.isTotal && !nextEntry.item.isTotal) {
             var currentLevel = topPad + ((maxValue - entry.item.end) * unit);
             entry.connector.style.top = currentLevel + "px";
             entry.connector.style.width = Math.max(0, entry.plot.clientWidth * 0.2 + 8) + "px";
@@ -703,6 +703,7 @@
         text.setAttribute("text-anchor", "start");
         text.setAttribute("dominant-baseline", "middle");
         text.setAttribute("class", "widget-label");
+        text.setAttribute("font-size", "11");
         text.textContent = item.label + ": " + formatCurrency(item.value);
         svg.appendChild(text);
       });
