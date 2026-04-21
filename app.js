@@ -547,6 +547,16 @@
       bar.style.height = "0px";
       plot.appendChild(bar);
 
+      var connector = document.createElement("div");
+      connector.style.position = "absolute";
+      connector.style.height = "0";
+      connector.style.borderTop = "1px dashed #afafaf";
+      connector.style.left = "90%";
+      connector.style.width = "0";
+      connector.style.pointerEvents = "none";
+      connector.style.zIndex = "4";
+      plot.appendChild(connector);
+
       var label = document.createElement("span");
       label.className = "bar-month";
       label.textContent = monthShortLabel(item.date);
@@ -562,7 +572,7 @@
       column.appendChild(plot);
       column.appendChild(label);
       chart.appendChild(column);
-      column.__wf = { plot: plot, value: value, bar: bar, item: item };
+      column.__wf = { plot: plot, value: value, bar: bar, connector: connector, item: item };
     });
 
     wrap.appendChild(chart);
@@ -578,7 +588,7 @@
       var bottomPad = minValue < 0 ? valueHeight + 8 : 8;
       var usableHeight = Math.max(plotHeight - topPad - bottomPad, 40);
       var unit = usableHeight / range;
-      columns.forEach(function (entry) {
+      columns.forEach(function (entry, idx) {
         entry.plot.style.height = plotHeight + "px";
         var topVal = Math.max(entry.item.start, entry.item.end);
         var bottomVal = Math.min(entry.item.start, entry.item.end);
@@ -589,6 +599,16 @@
         entry.bar.style.height = barHeight + "px";
         entry.value.style.top = Math.max(0, top - valueHeight - 4) + "px";
         entry.value.style.bottom = "auto";
+        if (entry.connector) {
+          if (idx < columns.length - 1 && !entry.item.isTotal) {
+            var next = columns[idx + 1];
+            var currentLevel = topPad + ((maxValue - entry.item.end) * unit);
+            entry.connector.style.top = currentLevel + "px";
+            entry.connector.style.width = Math.max(0, entry.plot.clientWidth * 0.2) + "px";
+          } else {
+            entry.connector.style.width = "0";
+          }
+        }
       });
     });
   }
@@ -620,12 +640,12 @@
       var width = wrap.clientWidth || 320;
       var height = wrap.clientHeight || 320;
       var svg = createSvg("svg");
-      var labelWidth = Math.min(140, width * 0.34);
+      var labelWidth = Math.min(150, width * 0.38);
       var stroke = 12;
       var gap = 14;
-      var outerRadius = Math.min((width - labelWidth - 32) / 2, (height - 32) / 2);
-      var cx = labelWidth + outerRadius + 16;
-      var cy = height - outerRadius - 16;
+      var outerRadius = Math.min((width - labelWidth - 20) / 2, (height - 24) / 2);
+      var cx = labelWidth + outerRadius + 8;
+      var cy = height - outerRadius - 8;
       var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
       var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
       var colors = ["#4996b2", "#22c55e", "#ef4444"];
@@ -674,8 +694,8 @@
         svg.appendChild(arc);
 
         var text = createSvg("text");
-        text.setAttribute("x", "18");
-        text.setAttribute("y", String(cy - radius));
+        text.setAttribute("x", "16");
+        text.setAttribute("y", String(88 + index * 26));
         text.setAttribute("text-anchor", "start");
         text.setAttribute("dominant-baseline", "middle");
         text.setAttribute("class", "widget-label");
