@@ -341,7 +341,7 @@
     return function (endKey) {
       var endIndex = series.months.findIndex(function (month) { return month.key === endKey; });
       if (endIndex < 0) return [];
-      return series.months.slice(Math.max(0, endIndex - count + 1), endIndex + 1).reverse();
+      return series.months.slice(Math.max(0, endIndex - count + 1), endIndex + 1);
     };
   }
 
