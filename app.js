@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var workbookPath = "./sample_-_superstore.xls";
+  var dataPath = "./Sample - Superstore_Orders.csv";
   var cardPages = [
     { key: "bar", label: "Bar Chart" },
     { key: "line", label: "Line Chart" },
@@ -459,8 +459,8 @@
 
       points.forEach(function (point) {
         svgContent += '<circle cx="' + point.x.toFixed(1) + '" cy="' + point.y.toFixed(1) + '" r="4" fill="#4996b2"/>';
-        svgContent += '<text x="' + point.x.toFixed(1) + '" y="' + (height - 10) + '" text-anchor="middle" font-size="9" font-weight="600" fill="#666666">' + monthShortLabel(point.month.date) + "</text>";
-        svgContent += '<text x="' + point.x.toFixed(1) + '" y="' + (point.y - 8).toFixed(1) + '" text-anchor="middle" font-size="10" font-weight="600" fill="#666666">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
+        svgContent += '<text class="widget-label" x="' + point.x.toFixed(1) + '" y="' + (height - 10) + '" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
+        svgContent += '<text class="widget-label" x="' + point.x.toFixed(1) + '" y="' + (point.y - 8).toFixed(1) + '" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
         svgContent += '<circle class="line-hit" data-idx="' + points.indexOf(point) + '" cx="' + point.x.toFixed(1) + '" cy="' + point.y.toFixed(1) + '" r="12" fill="transparent"/>';
       });
 
@@ -483,22 +483,40 @@
 
   function renderWaterfallChart(series, mount, endKey) {
     var months = recentMonthsDescending(series, 8)(endKey);
-    var changes = months.map(function (month, index) {
-      var nextMonth = months[index + 1];
-      return {
+    var chronological = months.slice().reverse();
+    var running = 0;
+    var varianceSeries = chronological.map(function (month, index) {
+      var previous = index > 0 ? chronological[index - 1].sales : 0;
+      var delta = month.sales - previous;
+      var item = {
+        key: month.key,
         date: month.date,
         sales: month.sales,
-        delta: nextMonth ? month.sales - nextMonth.sales : month.sales
+        delta: delta,
+        start: running,
+        end: running + delta
       };
-    });
+      running += delta;
+      return item;
+    }).reverse();
 
     var wrap = document.createElement("div");
     wrap.className = "w-bars-shell";
     var chart = document.createElement("div");
     chart.className = "w-bars";
-    var maxValue = Math.max.apply(null, changes.map(function (item) { return Math.abs(item.delta); }).concat([1]));
+    var allValues = [];
+    varianceSeries.forEach(function (item) {
+      allValues.push(item.start, item.end, 0);
+    });
+    var maxValue = Math.max.apply(null, allValues.concat([1]));
+    var minValue = Math.min.apply(null, allValues.concat([0]));
+    if (maxValue === minValue) {
+      maxValue += 1;
+      minValue -= 1;
+    }
+    var range = maxValue - minValue;
 
-    changes.forEach(function (item) {
+    varianceSeries.forEach(function (item) {
       var column = document.createElement("div");
       column.className = "bar-col";
 
@@ -545,11 +563,16 @@
       var monthHeight = 18;
       var plotHeight = Math.max(chartHeight - monthHeight - 8, 120);
       var topPad = valueHeight + 8;
-      var usableHeight = Math.max(plotHeight - topPad - 8, 40);
+      var bottomPad = minValue < 0 ? valueHeight + 8 : 8;
+      var usableHeight = Math.max(plotHeight - topPad - bottomPad, 40);
+      var unit = usableHeight / range;
       columns.forEach(function (entry) {
         entry.plot.style.height = plotHeight + "px";
-        var barHeight = Math.max(4, Math.round((Math.abs(entry.item.delta) / maxValue) * usableHeight));
-        var top = topPad + (usableHeight - barHeight);
+        var topVal = Math.max(entry.item.start, entry.item.end);
+        var bottomVal = Math.min(entry.item.start, entry.item.end);
+        var top = topPad + ((maxValue - topVal) * unit);
+        var bottom = topPad + ((maxValue - bottomVal) * unit);
+        var barHeight = Math.max(4, Math.round(bottom - top));
         entry.bar.style.top = top + "px";
         entry.bar.style.height = barHeight + "px";
         entry.value.style.top = Math.max(0, top - valueHeight - 4) + "px";
@@ -635,9 +658,7 @@
       var text = createSvg("text");
       text.setAttribute("x", "24");
       text.setAttribute("y", String(68 + index * 22));
-      text.setAttribute("font-size", "12");
-      text.setAttribute("font-weight", "600");
-      text.setAttribute("fill", "#666666");
+      text.setAttribute("class", "widget-label");
       text.textContent = item.label + ": " + formatCurrency(item.value);
       svg.appendChild(text);
     });
@@ -718,7 +739,7 @@
         text.setAttribute("y", topY + (segSize / 2));
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("dominant-baseline", "middle");
-        text.setAttribute("font-size", "12");
+        text.setAttribute("font-size", "10");
         text.setAttribute("font-weight", "600");
         text.setAttribute("fill", "#ffffff");
         text.textContent = item.label + " | " + formatCurrency(item.value);
@@ -730,12 +751,27 @@
     });
   }
 
-  function renderWidgetByPage(series, mount, endKey) {
-    if (state.currentPage === 0) return renderBarChart(series, mount, endKey);
-    if (state.currentPage === 1) return renderLineChart(series, mount, endKey);
-    if (state.currentPage === 2) return renderWaterfallChart(series, mount, endKey);
-    if (state.currentPage === 3) return renderRadialChart(series, mount, endKey);
+  function renderWidgetByPage(pageIndex, series, mount, endKey) {
+    if (pageIndex === 0) return renderBarChart(series, mount, endKey);
+    if (pageIndex === 1) return renderLineChart(series, mount, endKey);
+    if (pageIndex === 2) return renderWaterfallChart(series, mount, endKey);
+    if (pageIndex === 3) return renderRadialChart(series, mount, endKey);
     return renderFunnelChart(series, mount, endKey);
+  }
+
+  function applyPaginationState(card) {
+    var strip = card.querySelector(".carousel-strip");
+    var prev = card.querySelector(".pag-prev");
+    var next = card.querySelector(".pag-next");
+    var indicator = card.querySelector(".pag-indicator");
+    if (strip) strip.style.transform = "translateX(-" + (state.currentPage * 100) + "%)";
+    if (prev) prev.classList.toggle("invisible", state.currentPage === 0);
+    if (next) next.classList.toggle("invisible", state.currentPage === cardPages.length - 1);
+    if (indicator) indicator.textContent = state.currentPage + 1 + "/" + cardPages.length;
+  }
+
+  function updatePaginationAcrossCards() {
+    Array.prototype.forEach.call(cardsGridEl.querySelectorAll(".card"), applyPaginationState);
   }
 
   function buildPager(card) {
@@ -743,14 +779,14 @@
     pager.className = "pagination";
 
     var prev = document.createElement("button");
-    prev.className = "pag-btn" + (state.currentPage === 0 ? " invisible" : "");
+    prev.className = "pag-btn pag-prev" + (state.currentPage === 0 ? " invisible" : "");
     prev.type = "button";
     prev.setAttribute("aria-label", "Previous page");
     prev.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>';
     prev.addEventListener("click", function () {
       if (state.currentPage > 0) {
         state.currentPage -= 1;
-        render();
+        updatePaginationAcrossCards();
       }
     });
 
@@ -759,14 +795,14 @@
     indicator.textContent = state.currentPage + 1 + "/" + cardPages.length;
 
     var next = document.createElement("button");
-    next.className = "pag-btn" + (state.currentPage === cardPages.length - 1 ? " invisible" : "");
+    next.className = "pag-btn pag-next" + (state.currentPage === cardPages.length - 1 ? " invisible" : "");
     next.type = "button";
     next.setAttribute("aria-label", "Next page");
     next.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>';
     next.addEventListener("click", function () {
       if (state.currentPage < cardPages.length - 1) {
         state.currentPage += 1;
-        render();
+        updatePaginationAcrossCards();
       }
     });
 
@@ -831,7 +867,7 @@
 
       var chartSlot = document.createElement("div");
       chartSlot.className = "widget-slot chart-slot";
-      if (pageIndex === state.currentPage) renderWidgetByPage(series, chartSlot, endKey);
+      renderWidgetByPage(pageIndex, series, chartSlot, endKey);
 
       pageEl.appendChild(summarySlot);
       pageEl.appendChild(chartSlot);
@@ -890,13 +926,13 @@
   }
 
   function loadWorkbook() {
-    fetch(workbookPath)
+    fetch(dataPath)
       .then(function (response) {
-        if (!response.ok) throw new Error("Could not load sample workbook.");
-        return response.arrayBuffer();
+        if (!response.ok) throw new Error("Could not load sample data.");
+        return response.text();
       })
-      .then(function (buffer) {
-        var workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+      .then(function (text) {
+        var workbook = XLSX.read(text, { type: "string", raw: true, cellDates: true });
         var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         var rawRows = XLSX.utils.sheet_to_json(firstSheet, {
           raw: true,
@@ -908,7 +944,7 @@
       })
       .catch(function (error) {
         console.error(error);
-        cardsGridEl.innerHTML = '<div class="empty-state">Check that <code>sample_-_superstore.xls</code> is present in this folder when you publish the demo.</div>';
+        cardsGridEl.innerHTML = '<div class="empty-state">Check that <code>Sample - Superstore_Orders.csv</code> is present in this folder when you publish the demo.</div>';
       });
   }
 

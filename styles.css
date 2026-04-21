@@ -418,6 +418,13 @@ body {
   color: #666666;
 }
 
+.widget-label {
+  font-size: 10px;
+  font-weight: 600;
+  fill: #666666;
+  color: #666666;
+}
+
 .w-line {
   flex: 1 1 auto;
   min-height: 0;
