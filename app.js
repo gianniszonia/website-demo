@@ -461,8 +461,8 @@
         var px = Math.round(point.x);
         var py = Math.round(point.y);
         svgContent += '<circle cx="' + px + '" cy="' + py + '" r="4" fill="#4996b2"/>';
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 10) + '" font-size="11" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 10) + '" font-size="11" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 10) + '" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 10) + '" font-size="10" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
         svgContent += '<circle class="line-hit" data-idx="' + points.indexOf(point) + '" cx="' + px + '" cy="' + py + '" r="12" fill="transparent"/>';
       });
 
@@ -486,21 +486,9 @@
   function renderWaterfallChart(series, mount, endKey) {
     var months = recentMonthsDescending(series, 8)(endKey);
     var fullMonths = series.months;
-    var varianceSeries = months.map(function (month, index) {
+    var varianceSeries = months.map(function (month) {
       var absoluteIndex = fullMonths.findIndex(function (item) { return item.key === month.key; });
       var previous = absoluteIndex > 0 ? fullMonths[absoluteIndex - 1] : null;
-      var isTotal = index === months.length - 1;
-      if (isTotal) {
-        return {
-          key: month.key,
-          date: month.date,
-          sales: month.sales,
-          delta: month.sales,
-          start: 0,
-          end: month.sales,
-          isTotal: true
-        };
-      }
       var prevSales = previous ? previous.sales : 0;
       return {
         key: month.key,
@@ -538,13 +526,12 @@
 
       var value = document.createElement("span");
       value.className = "bar-val";
-      value.textContent = formatCurrency(item.isTotal ? item.sales : item.delta);
-      value.style.color = "#333333";
+      value.textContent = formatCurrency(item.delta);
       plot.appendChild(value);
 
       var bar = document.createElement("div");
       bar.className = "bar";
-      bar.style.background = item.isTotal ? "#22c55e" : (item.delta >= 0 ? "#22c55e" : "#ef4444");
+      bar.style.background = item.delta >= 0 ? "#22c55e" : "#ef4444";
       bar.style.top = "0px";
       bar.style.height = "0px";
       plot.appendChild(bar);
@@ -566,7 +553,7 @@
       attachTooltip(column, function () {
         return tooltipCard(monthLongLabel(item.date), [
           tooltipRow("Sales", formatCurrencyFull(item.sales)),
-          tooltipRow(item.isTotal ? "Total" : "Change", formatCurrencyFull(item.isTotal ? item.sales : item.delta)),
+          tooltipRow("Change", formatCurrencyFull(item.delta)),
           tooltipRow("vs previous month", formatPercent(getBucketDeltaPct(series.months, monthKey(item.date), 1)))
         ]);
       });
@@ -603,7 +590,7 @@
         entry.value.style.bottom = "auto";
         if (entry.connector) {
           var nextEntry = idx < columns.length - 1 ? columns[idx + 1] : null;
-          if (nextEntry && !entry.item.isTotal && !nextEntry.item.isTotal) {
+          if (nextEntry) {
             var currentLevel = topPad + ((maxValue - entry.item.end) * unit);
             entry.connector.style.top = currentLevel + "px";
             entry.connector.style.width = Math.max(0, entry.plot.clientWidth * 0.2 + 8) + "px";
@@ -638,32 +625,32 @@
     wrap.className = "w-radial";
     mount.appendChild(wrap);
 
-    requestAnimationFrame(function () {
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
       var width = wrap.clientWidth || 320;
       var height = wrap.clientHeight || 320;
       var svg = createSvg("svg");
-      var labelWidth = Math.min(150, width * 0.38);
       var stroke = 12;
-      var gap = 14;
-      var outerRadius = Math.min((width - labelWidth - 20) / 2, (height - 24) / 2);
-      var cx = labelWidth + outerRadius + 8;
-      var cy = height / 2;
+      var stride = stroke + 12;
+      var cx = Math.round(width * 0.63);
+      var cy = Math.round(height / 2);
+      var outerRadius = Math.min(width - cx - 8, Math.floor((height - 24) / 2));
       var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
       var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
       var colors = ["#4996b2", "#22c55e", "#ef4444"];
-      var labelSpacing = Math.min(26, (height - 40) / Math.max(data.length, 1));
-      var labelYStart = cy - ((data.length - 1) * labelSpacing / 2);
+      var vStagger = data.length > 1 ? 20 : 0;
 
-      svg.setAttribute("width", "100%");
-      svg.setAttribute("height", "100%");
+      svg.setAttribute("width", width);
+      svg.setAttribute("height", height);
+      svg.setAttribute("style", "width:" + width + "px;height:" + height + "px;display:block");
       svg.setAttribute("viewBox", "0 0 " + width + " " + height);
 
       data.forEach(function (item, index) {
-        var radius = outerRadius - index * (stroke + gap);
+        var radius = outerRadius - index * stride;
         var circumference = 2 * Math.PI * radius;
         var trackLength = circumference * 0.75;
         var valueLength = Math.max(0, (item.value / maxValue) * trackLength);
         var transform = "rotate(-90 " + cx + " " + cy + ")";
+        var color = colors[index % colors.length];
 
         var track = createSvg("circle");
         track.setAttribute("cx", cx);
@@ -682,7 +669,7 @@
         arc.setAttribute("cy", cy);
         arc.setAttribute("r", radius);
         arc.setAttribute("fill", "none");
-        arc.setAttribute("stroke", colors[index % colors.length]);
+        arc.setAttribute("stroke", color);
         arc.setAttribute("stroke-width", stroke);
         arc.setAttribute("stroke-dasharray", valueLength.toFixed(2) + " " + circumference.toFixed(2));
         arc.setAttribute("stroke-linecap", "round");
@@ -697,20 +684,31 @@
         });
         svg.appendChild(arc);
 
+        var arcLeftX = cx - radius;
+        var labelY = Math.round(cy + (index - (data.length - 1) / 2) * vStagger);
+
+        var dot = createSvg("circle");
+        dot.setAttribute("cx", String(arcLeftX));
+        dot.setAttribute("cy", String(cy));
+        dot.setAttribute("r", "3");
+        dot.setAttribute("fill", color);
+        dot.setAttribute("pointer-events", "none");
+        svg.appendChild(dot);
+
         var text = createSvg("text");
-        text.setAttribute("x", "16");
-        text.setAttribute("y", String(Math.round(labelYStart + index * labelSpacing)));
-        text.setAttribute("text-anchor", "start");
+        text.setAttribute("x", String(arcLeftX - 8));
+        text.setAttribute("y", String(labelY));
+        text.setAttribute("text-anchor", "end");
         text.setAttribute("dominant-baseline", "middle");
         text.setAttribute("class", "widget-label");
-        text.setAttribute("font-size", "11");
+        text.setAttribute("font-size", "10");
         text.textContent = item.label + ": " + formatCurrency(item.value);
         svg.appendChild(text);
       });
 
       wrap.innerHTML = "";
       wrap.appendChild(svg);
-    });
+    }); });
   }
 
   function renderFunnelChart(series, mount, endKey) {
