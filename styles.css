@@ -42,7 +42,7 @@ body {
 }
 
 .dashboard-header {
-  margin-bottom: 18px;
+  margin-bottom: 22px;
 }
 
 .title-wrap {
@@ -50,7 +50,7 @@ body {
   align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 16px;
+  margin-bottom: 30px;
 }
 
 .title-wrap h1 {
@@ -60,15 +60,9 @@ body {
   letter-spacing: -0.04em;
 }
 
-.data-status {
-  color: #666666;
-  font-size: 14px;
-  font-weight: 500;
-}
-
 .filters-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 

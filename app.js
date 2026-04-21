@@ -21,11 +21,9 @@
     currentPage: 0
   };
 
-  var dataStatusEl = document.getElementById("dataStatus");
   var regionFilterEl = document.getElementById("regionFilter");
   var categoryFilterEl = document.getElementById("categoryFilter");
   var subCategoryFilterEl = document.getElementById("subCategoryFilter");
-  var stateFilterEl = document.getElementById("stateFilter");
   var cardsGridEl = document.getElementById("cardsGrid");
   var tooltipEl = document.getElementById("chartTooltip");
 
@@ -117,7 +115,6 @@
           Region: row.Region || "",
           Category: row.Category || "",
           SubCategory: row["Sub-Category"] || "",
-          State: row.State || "",
           Segment: row.Segment || "",
           ShipMode: row["Ship Mode"] || "",
           orderDate: orderDate,
@@ -134,7 +131,6 @@
       if (regionFilterEl.value && row.Region !== regionFilterEl.value) return false;
       if (categoryFilterEl.value && row.Category !== categoryFilterEl.value) return false;
       if (subCategoryFilterEl.value && row.SubCategory !== subCategoryFilterEl.value) return false;
-      if (stateFilterEl.value && row.State !== stateFilterEl.value) return false;
       return true;
     });
   }
@@ -249,6 +245,24 @@
     return document.createElementNS("http://www.w3.org/2000/svg", tag);
   }
 
+  function interpolateHexColor(startHex, endHex, ratio) {
+    function parse(hex) {
+      var value = hex.replace("#", "");
+      if (value.length === 3) value = value.split("").map(function (c) { return c + c; }).join("");
+      return {
+        r: parseInt(value.slice(0, 2), 16),
+        g: parseInt(value.slice(2, 4), 16),
+        b: parseInt(value.slice(4, 6), 16)
+      };
+    }
+    function toHex(value) {
+      return Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, "0");
+    }
+    var start = parse(startHex);
+    var end = parse(endHex);
+    return "#" + toHex(start.r + ((end.r - start.r) * ratio)) + toHex(start.g + ((end.g - start.g) * ratio)) + toHex(start.b + ((end.b - start.b) * ratio));
+  }
+
   function recentMonthsDescending(series, count) {
     return series.months.slice(-count).reverse();
   }
@@ -301,69 +315,64 @@
     var months = recentMonthsDescending(series, 8);
     var wrap = document.createElement("div");
     wrap.className = "w-line";
-    var svg = createSvg("svg");
-    var width = 360;
-    var height = 320;
-    var pad = { top: 22, right: 16, bottom: 34, left: 28 };
-    var plotWidth = width - pad.left - pad.right;
-    var plotHeight = height - pad.top - pad.bottom;
-    var maxValue = Math.max.apply(null, months.map(function (month) { return month.sales; }).concat([1]));
-    var minValue = Math.min.apply(null, months.map(function (month) { return month.sales; }).concat([0]));
-    var range = Math.max(1, maxValue - minValue);
-
-    svg.setAttribute("viewBox", "0 0 " + width + " " + height);
-
-    var points = months.map(function (month, index) {
-      return {
-        month: month,
-        x: pad.left + (plotWidth / Math.max(1, months.length - 1)) * index,
-        y: pad.top + plotHeight - (((month.sales - minValue) / range) * plotHeight)
-      };
-    });
-
-    var pathData = points.map(function (point, index) {
-      return (index === 0 ? "M" : "L") + point.x.toFixed(1) + "," + point.y.toFixed(1);
-    }).join(" ");
-
-    var area = createSvg("path");
-    area.setAttribute("d", pathData + " L " + points[points.length - 1].x.toFixed(1) + "," + (height - pad.bottom) + " L " + points[0].x.toFixed(1) + "," + (height - pad.bottom) + " Z");
-    area.setAttribute("fill", "rgba(73,150,178,0.12)");
-
-    var line = createSvg("path");
-    line.setAttribute("d", pathData);
-    line.setAttribute("fill", "none");
-    line.setAttribute("stroke", "#4996b2");
-    line.setAttribute("stroke-width", "3");
-    line.setAttribute("stroke-linecap", "round");
-    line.setAttribute("stroke-linejoin", "round");
-
-    svg.appendChild(area);
-    svg.appendChild(line);
-
-    points.forEach(function (point) {
-      var dot = createSvg("circle");
-      dot.setAttribute("cx", point.x);
-      dot.setAttribute("cy", point.y);
-      dot.setAttribute("r", "4");
-      dot.setAttribute("fill", "#4996b2");
-      attachTooltip(dot, function () {
-        return tooltipHtml(monthLongLabel(point.month.date), formatCurrencyFull(point.month.sales));
-      });
-      svg.appendChild(dot);
-
-      var text = createSvg("text");
-      text.setAttribute("x", point.x);
-      text.setAttribute("y", height - 10);
-      text.setAttribute("text-anchor", "middle");
-      text.setAttribute("font-size", "9");
-      text.setAttribute("font-weight", "600");
-      text.setAttribute("fill", "#666666");
-      text.textContent = monthShortLabel(point.month.date);
-      svg.appendChild(text);
-    });
-
-    wrap.appendChild(svg);
     mount.appendChild(wrap);
+
+    requestAnimationFrame(function () {
+      var width = wrap.clientWidth || 360;
+      var height = wrap.clientHeight || 320;
+      var pad = { top: 24, right: 18, bottom: 34, left: 28 };
+      var plotWidth = width - pad.left - pad.right;
+      var plotHeight = height - pad.top - pad.bottom;
+      var maxValue = Math.max.apply(null, months.map(function (month) { return month.sales; }).concat([1]));
+      var minValue = Math.min.apply(null, months.map(function (month) { return month.sales; }).concat([0]));
+      var range = Math.max(1, maxValue - minValue);
+
+      function runPath(points) {
+        if (points.length < 2) return "M" + points[0].x.toFixed(1) + "," + points[0].y.toFixed(1);
+        var d = "M" + points[0].x.toFixed(1) + "," + points[0].y.toFixed(1);
+        for (var i = 0; i < points.length - 1; i += 1) {
+          var p0 = points[i];
+          var p1 = points[i + 1];
+          var mx = (p0.x + p1.x) / 2;
+          d += " C" + mx.toFixed(1) + "," + p0.y.toFixed(1) + " " + mx.toFixed(1) + "," + p1.y.toFixed(1) + " " + p1.x.toFixed(1) + "," + p1.y.toFixed(1);
+        }
+        return d;
+      }
+
+      var points = months.map(function (month, index) {
+        return {
+          month: month,
+          x: pad.left + (plotWidth / Math.max(1, months.length - 1)) * index,
+          y: pad.top + plotHeight - (((month.sales - minValue) / range) * plotHeight)
+        };
+      });
+
+      var pathData = runPath(points);
+      var areaData = pathData + " L " + points[points.length - 1].x.toFixed(1) + "," + (height - pad.bottom) + " L " + points[0].x.toFixed(1) + "," + (height - pad.bottom) + " Z";
+      var gradientId = "lineGrad" + Math.random().toString(36).slice(2, 8);
+      var svgContent = '<svg viewBox="0 0 ' + width + " " + height + '" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">' +
+        '<defs><linearGradient id="' + gradientId + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4996b2" stop-opacity="0.28"/><stop offset="100%" stop-color="#4996b2" stop-opacity="0.02"/></linearGradient></defs>' +
+        '<path d="' + areaData + '" fill="url(#' + gradientId + ')"/>' +
+        '<path d="' + pathData + '" fill="none" stroke="#4996b2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
+
+      points.forEach(function (point) {
+        svgContent += '<circle cx="' + point.x.toFixed(1) + '" cy="' + point.y.toFixed(1) + '" r="4" fill="#4996b2"/>';
+        svgContent += '<text x="' + point.x.toFixed(1) + '" y="' + (height - 10) + '" text-anchor="middle" font-size="9" font-weight="600" fill="#666666">' + monthShortLabel(point.month.date) + "</text>";
+        svgContent += '<text x="' + point.x.toFixed(1) + '" y="' + (point.y - 8).toFixed(1) + '" text-anchor="middle" font-size="10" font-weight="600" fill="#666666">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
+        svgContent += '<circle class="line-hit" data-idx="' + points.indexOf(point) + '" cx="' + point.x.toFixed(1) + '" cy="' + point.y.toFixed(1) + '" r="12" fill="transparent"/>';
+      });
+
+      svgContent += "</svg>";
+      wrap.innerHTML = svgContent;
+
+      Array.prototype.forEach.call(wrap.querySelectorAll(".line-hit"), function (hit) {
+        var idx = parseInt(hit.getAttribute("data-idx"), 10);
+        var point = points[idx];
+        attachTooltip(hit, function () {
+          return tooltipHtml(monthLongLabel(point.month.date), formatCurrencyFull(point.month.sales));
+        });
+      });
+    });
   }
 
   function renderWaterfallChart(series, mount) {
@@ -507,51 +516,81 @@
     var data = aggregateBySegment(series.rows);
     var wrap = document.createElement("div");
     wrap.className = "w-funnel";
-    var svg = createSvg("svg");
-    var width = 320;
-    var height = 320;
-    var centerX = 160;
-    var colors = ["#4996b2", "#63abc6", "#102127"];
-    var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
-
-    svg.setAttribute("viewBox", "0 0 " + width + " " + height);
-
-    data.forEach(function (item, index) {
-      var widthTop = 220 - index * 52;
-      var widthBottom = index === data.length - 1 ? widthTop - 34 : 220 - (index + 1) * 52;
-      var topY = 30 + index * 86;
-      var bottomY = topY + 68;
-      var path = createSvg("path");
-      path.setAttribute("d", [
-        "M", centerX - widthTop / 2, topY,
-        "L", centerX + widthTop / 2, topY,
-        "L", centerX + widthBottom / 2, bottomY,
-        "L", centerX - widthBottom / 2, bottomY,
-        "Z"
-      ].join(" "));
-      path.setAttribute("fill", colors[index % colors.length]);
-      attachTooltip(path, function () {
-        return tooltipHtml(
-          item.label,
-          formatCurrencyFull(item.value),
-          Math.round((item.value / maxValue) * 100) + "% of top stage"
-        );
-      });
-      svg.appendChild(path);
-
-      var text = createSvg("text");
-      text.setAttribute("x", centerX);
-      text.setAttribute("y", topY + 37);
-      text.setAttribute("text-anchor", "middle");
-      text.setAttribute("font-size", "12");
-      text.setAttribute("font-weight", "700");
-      text.setAttribute("fill", "#ffffff");
-      text.textContent = item.label + " " + formatCurrency(item.value);
-      svg.appendChild(text);
-    });
-
-    wrap.appendChild(svg);
     mount.appendChild(wrap);
+
+    requestAnimationFrame(function () {
+      var width = wrap.clientWidth || 320;
+      var height = wrap.clientHeight || 320;
+      var pad = 12;
+      var centerX = width / 2;
+      var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
+      var segCount = data.length;
+      var mainSpan = height - (pad * 2);
+      var crossSpan = width - (pad * 2);
+      var segSize = mainSpan / Math.max(segCount, 1);
+      var svg = createSvg("svg");
+      svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+
+      data.forEach(function (item, index) {
+        var nextItem = data[Math.min(index + 1, segCount - 1)];
+        var curRatio = Math.max(0.12, Math.abs(item.value) / maxValue);
+        var nextRatio = Math.max(0.12, Math.abs(nextItem.value) / maxValue);
+        var curCross = crossSpan * curRatio;
+        var nextCross = crossSpan * nextRatio;
+        var topY = pad + (index * segSize);
+        var bottomY = pad + ((index + 1) * segSize);
+        var leftTop = centerX - (curCross / 2);
+        var rightTop = centerX + (curCross / 2);
+        var leftBottom = centerX - (nextCross / 2);
+        var rightBottom = centerX + (nextCross / 2);
+        var curve = Math.min(18, segSize * 0.38);
+        var midY = (topY + bottomY) / 2;
+        var color = interpolateHexColor("#4996b2", "#8fd3e8", segCount === 1 ? 0 : (index / (segCount - 1)));
+
+        var path = createSvg("path");
+        var d =
+          "M " + leftTop.toFixed(1) + " " + topY.toFixed(1) +
+          " C " + (leftTop + curve).toFixed(1) + " " + (topY - curve * 0.45).toFixed(1) +
+          " " + (rightTop - curve).toFixed(1) + " " + (topY - curve * 0.45).toFixed(1) +
+          " " + rightTop.toFixed(1) + " " + topY.toFixed(1) +
+          " C " + (rightTop - curve * 0.25).toFixed(1) + " " + midY.toFixed(1) +
+          " " + (rightBottom + curve * 0.25).toFixed(1) + " " + midY.toFixed(1) +
+          " " + rightBottom.toFixed(1) + " " + bottomY.toFixed(1) +
+          " C " + (rightBottom - curve).toFixed(1) + " " + (bottomY + curve * 0.45).toFixed(1) +
+          " " + (leftBottom + curve).toFixed(1) + " " + (bottomY + curve * 0.45).toFixed(1) +
+          " " + leftBottom.toFixed(1) + " " + bottomY.toFixed(1) +
+          " C " + (leftBottom - curve * 0.25).toFixed(1) + " " + midY.toFixed(1) +
+          " " + (leftTop + curve * 0.25).toFixed(1) + " " + midY.toFixed(1) +
+          " " + leftTop.toFixed(1) + " " + topY.toFixed(1) + " Z";
+        path.setAttribute("d", d);
+        path.setAttribute("fill", color);
+        path.setAttribute("stroke", color);
+        path.setAttribute("stroke-width", "1.5");
+        path.setAttribute("stroke-linejoin", "round");
+        attachTooltip(path, function () {
+          return tooltipHtml(
+            item.label,
+            formatCurrencyFull(item.value),
+            Math.round((item.value / maxValue) * 100) + "% of top stage"
+          );
+        });
+        svg.appendChild(path);
+
+        var text = createSvg("text");
+        text.setAttribute("x", centerX);
+        text.setAttribute("y", topY + (segSize / 2));
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("dominant-baseline", "middle");
+        text.setAttribute("font-size", "12");
+        text.setAttribute("font-weight", "600");
+        text.setAttribute("fill", "#ffffff");
+        text.textContent = item.label + " | " + formatCurrency(item.value);
+        svg.appendChild(text);
+      });
+
+      wrap.innerHTML = "";
+      wrap.appendChild(svg);
+    });
   }
 
   function renderWidgetByPage(series, mount) {
@@ -688,9 +727,8 @@
     populateFilter(regionFilterEl, Array.from(new Set(state.rows.map(function (row) { return row.Region; }))).sort(), "Regions");
     populateFilter(categoryFilterEl, Array.from(new Set(state.rows.map(function (row) { return row.Category; }))).sort(), "Categories");
     populateFilter(subCategoryFilterEl, Array.from(new Set(state.rows.map(function (row) { return row.SubCategory; }))).sort(), "Sub-Categories");
-    populateFilter(stateFilterEl, Array.from(new Set(state.rows.map(function (row) { return row.State; }))).sort(), "States");
 
-    [regionFilterEl, categoryFilterEl, subCategoryFilterEl, stateFilterEl].forEach(function (el) {
+    [regionFilterEl, categoryFilterEl, subCategoryFilterEl].forEach(function (el) {
       el.addEventListener("change", render);
     });
   }
@@ -711,11 +749,9 @@
         state.rows = normalizeRows(rawRows);
         hydrateFilters();
         render();
-        dataStatusEl.textContent = "Loaded Superstore sample data successfully.";
       })
       .catch(function (error) {
         console.error(error);
-        dataStatusEl.textContent = "Failed to load sample data.";
         cardsGridEl.innerHTML = '<div class="empty-state">Check that <code>sample_-_superstore.xls</code> is present in this folder when you publish the demo.</div>';
       });
   }
