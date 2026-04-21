@@ -280,8 +280,30 @@
   function showTooltip(event, html) {
     tooltipEl.innerHTML = html;
     tooltipEl.classList.add("visible");
-    tooltipEl.style.left = event.clientX + 14 + "px";
-    tooltipEl.style.top = event.clientY + 14 + "px";
+    var source = event.currentTarget || event.target;
+    var card = source && source.closest ? source.closest(".card") : null;
+    var tooltipRect = tooltipEl.getBoundingClientRect();
+    var cardRect = card ? card.getBoundingClientRect() : {
+      left: 8,
+      top: 8,
+      right: window.innerWidth - 8,
+      bottom: window.innerHeight - 8
+    };
+    var gap = 12;
+    var preferRight = event.clientX <= ((cardRect.left + cardRect.right) / 2);
+    var left = preferRight
+      ? event.clientX + gap
+      : event.clientX - tooltipRect.width - gap;
+
+    if (left < cardRect.left + 8) left = cardRect.left + 8;
+    if (left + tooltipRect.width > cardRect.right - 8) left = cardRect.right - tooltipRect.width - 8;
+
+    var top = event.clientY - (tooltipRect.height / 2);
+    if (top < cardRect.top + 8) top = cardRect.top + 8;
+    if (top + tooltipRect.height > cardRect.bottom - 8) top = cardRect.bottom - tooltipRect.height - 8;
+
+    tooltipEl.style.left = left + "px";
+    tooltipEl.style.top = top + "px";
   }
 
   function hideTooltip() {
@@ -461,8 +483,8 @@
         var px = Math.round(point.x);
         var py = Math.round(point.y);
         svgContent += '<circle cx="' + px + '" cy="' + py + '" r="4" fill="#4996b2"/>';
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 8) + '" font-size="11" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 13) + '" font-size="14" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 8) + '" font-size="13" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 15) + '" font-size="17" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
         svgContent += '<circle class="line-hit" data-idx="' + points.indexOf(point) + '" cx="' + px + '" cy="' + py + '" r="12" fill="transparent"/>';
       });
 
@@ -635,9 +657,11 @@
       var svg = createSvg("svg");
       var stroke = 12;
       var stride = stroke + 12;
-      var labelAreaW = 132;
-      var outerRadius = Math.min(Math.floor((width - labelAreaW - 16) / 2), Math.floor((height - 24) / 2));
-      var cx = labelAreaW + outerRadius + 12;
+      var labelAreaW = 170;
+      var outerRadius = Math.min(Math.floor((width - labelAreaW - 32) / 2), Math.floor((height - 24) / 2));
+      var layoutWidth = labelAreaW + (outerRadius * 2);
+      var layoutLeft = Math.max(12, Math.round((width - layoutWidth) / 2));
+      var cx = layoutLeft + labelAreaW + outerRadius;
       var cy = Math.round(height / 2);
       var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
       var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
@@ -691,7 +715,7 @@
         var startX = cx;
         var startY = cy - radius;
         var labelY = Math.round(startY);
-        var dotCx = Math.round(startX - stroke / 2 - 18);
+        var dotCx = Math.round(startX - stroke / 2 - 22);
 
         var dot = createSvg("circle");
         dot.setAttribute("cx", String(dotCx));
@@ -702,12 +726,12 @@
         svg.appendChild(dot);
 
         var text = createSvg("text");
-        text.setAttribute("x", String(dotCx - 12));
+        text.setAttribute("x", String(dotCx - 16));
         text.setAttribute("y", String(labelY));
         text.setAttribute("text-anchor", "end");
         text.setAttribute("dominant-baseline", "middle");
         text.setAttribute("class", "widget-label");
-        text.setAttribute("font-size", "15");
+        text.setAttribute("font-size", "18");
         text.textContent = item.label + ": " + formatCurrency(item.value);
         svg.appendChild(text);
       });
