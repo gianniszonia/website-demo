@@ -483,8 +483,8 @@
         var px = Math.round(point.x);
         var py = Math.round(point.y);
         svgContent += '<circle cx="' + px + '" cy="' + py + '" r="4" fill="#4996b2"/>';
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 8) + '" font-size="13" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 15) + '" font-size="17" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 8) + '" font-size="15" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 18) + '" font-size="22" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
         svgContent += '<circle class="line-hit" data-idx="' + points.indexOf(point) + '" cx="' + px + '" cy="' + py + '" r="12" fill="transparent"/>';
       });
 
@@ -657,11 +657,11 @@
       var svg = createSvg("svg");
       var stroke = 12;
       var stride = stroke + 12;
-      var labelAreaW = 170;
+      var labelAreaW = 162;
       var outerRadius = Math.min(Math.floor((width - labelAreaW - 32) / 2), Math.floor((height - 24) / 2));
       var layoutWidth = labelAreaW + (outerRadius * 2);
       var layoutLeft = Math.max(12, Math.round((width - layoutWidth) / 2));
-      var cx = layoutLeft + labelAreaW + outerRadius;
+      var cx = layoutLeft + labelAreaW + outerRadius - 34;
       var cy = Math.round(height / 2);
       var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
       var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
@@ -715,7 +715,7 @@
         var startX = cx;
         var startY = cy - radius;
         var labelY = Math.round(startY);
-        var dotCx = Math.round(startX - stroke / 2 - 22);
+        var dotCx = Math.round(startX - stroke / 2 - 26);
 
         var dot = createSvg("circle");
         dot.setAttribute("cx", String(dotCx));
@@ -726,12 +726,12 @@
         svg.appendChild(dot);
 
         var text = createSvg("text");
-        text.setAttribute("x", String(dotCx - 16));
+        text.setAttribute("x", String(dotCx - 20));
         text.setAttribute("y", String(labelY));
         text.setAttribute("text-anchor", "end");
         text.setAttribute("dominant-baseline", "middle");
         text.setAttribute("class", "widget-label");
-        text.setAttribute("font-size", "18");
+        text.setAttribute("font-size", "20");
         text.textContent = item.label + ": " + formatCurrency(item.value);
         svg.appendChild(text);
       });
