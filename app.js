@@ -126,8 +126,8 @@
   }
 
   function tooltipCard(title, rows) {
-    return '<div style="font-size:12px">' +
-      '<div style="margin-bottom:4px;font-weight:600">' + escapeHtml(title) + "</div>" +
+    return '<div style="font-size:13px">' +
+      '<div style="margin-bottom:5px;font-weight:600;font-size:13px">' + escapeHtml(title) + "</div>" +
       rows.join("") +
       "</div>";
   }
@@ -455,14 +455,14 @@
       var svgContent = '<svg width="' + width + '" height="' + height + '" style="width:' + width + 'px;height:' + height + 'px;display:block" viewBox="0 0 ' + width + " " + height + '" xmlns="http://www.w3.org/2000/svg">' +
         '<defs><linearGradient id="' + gradientId + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4996b2" stop-opacity="0.28"/><stop offset="100%" stop-color="#4996b2" stop-opacity="0.02"/></linearGradient></defs>' +
         '<path d="' + areaData + '" fill="url(#' + gradientId + ')"/>' +
-        '<path d="' + pathData + '" fill="none" stroke="#4996b2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
+        '<path d="' + pathData + '" fill="none" stroke="#4996b2" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>';
 
       points.forEach(function (point) {
         var px = Math.round(point.x);
         var py = Math.round(point.y);
         svgContent += '<circle cx="' + px + '" cy="' + py + '" r="4" fill="#4996b2"/>';
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 8) + '" font-size="10" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
-        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 11) + '" font-size="12" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + (height - 8) + '" font-size="11" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
+        svgContent += '<text class="widget-label" x="' + px + '" y="' + Math.round(point.y - 13) + '" font-size="14" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
         svgContent += '<circle class="line-hit" data-idx="' + points.indexOf(point) + '" cx="' + px + '" cy="' + py + '" r="12" fill="transparent"/>';
       });
 
@@ -635,14 +635,13 @@
       var svg = createSvg("svg");
       var stroke = 12;
       var stride = stroke + 12;
-      var labelAreaW = 120;
+      var labelAreaW = 132;
       var outerRadius = Math.min(Math.floor((width - labelAreaW - 16) / 2), Math.floor((height - 24) / 2));
-      var cx = labelAreaW + outerRadius + 8;
+      var cx = labelAreaW + outerRadius + 12;
       var cy = Math.round(height / 2);
       var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
       var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
       var colors = ["#4996b2", "#22c55e", "#ef4444"];
-      var vStagger = data.length > 1 ? 22 : 0;
 
       svg.setAttribute("width", "100%");
       svg.setAttribute("height", "100%");
@@ -689,26 +688,26 @@
         svg.appendChild(arc);
 
         // Label at arc's left opening — dot placed outside the stroke, text to its left
-        var arcLeft = cx - radius;
-        var labelY = Math.round(cy + (index - (data.length - 1) / 2) * vStagger);
-        // stroke extends stroke/2 px outward from path; add 10px clear gap beyond that
-        var dotCx = Math.round(arcLeft - stroke / 2 - 10);
+        var startX = cx;
+        var startY = cy - radius;
+        var labelY = Math.round(startY);
+        var dotCx = Math.round(startX - stroke / 2 - 18);
 
         var dot = createSvg("circle");
         dot.setAttribute("cx", String(dotCx));
         dot.setAttribute("cy", String(labelY));
-        dot.setAttribute("r", "4");
+        dot.setAttribute("r", "4.5");
         dot.setAttribute("fill", color);
         dot.setAttribute("pointer-events", "none");
         svg.appendChild(dot);
 
         var text = createSvg("text");
-        text.setAttribute("x", String(dotCx - 8));
+        text.setAttribute("x", String(dotCx - 12));
         text.setAttribute("y", String(labelY));
         text.setAttribute("text-anchor", "end");
         text.setAttribute("dominant-baseline", "middle");
         text.setAttribute("class", "widget-label");
-        text.setAttribute("font-size", "13");
+        text.setAttribute("font-size", "15");
         text.textContent = item.label + ": " + formatCurrency(item.value);
         svg.appendChild(text);
       });

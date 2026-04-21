@@ -432,6 +432,8 @@ body {
   font-family: var(--font);
   letter-spacing: 0.04em;
   text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  shape-rendering: geometricPrecision;
 }
 
 .w-line {
@@ -467,7 +469,7 @@ body {
   background: rgba(30, 30, 40, 0.92);
   color: #ffffff;
   font-family: var(--font);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   padding: 8px 12px;
   border-radius: 8px;
@@ -486,8 +488,8 @@ body {
 
 .chart-tooltip .tt-label {
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.96);
+  font-size: 0.84rem;
 }
 
 .empty-state {
