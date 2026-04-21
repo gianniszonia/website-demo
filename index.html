@@ -3,55 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KPI Card Website Demo</title>
+  <title>KPI Card Viz Extension Demo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <main class="page-shell">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Website Demo</p>
-        <h1>KPI Card by Ship Mode</h1>
-        <p class="hero-copy">
-          Standalone demo using <strong>Sales</strong> and <strong>Month of Order Date</strong>,
-          automatically split by <strong>Ship Mode</strong>.
-        </p>
-      </div>
-      <div class="hero-note">
-        <span class="status-dot"></span>
-        <span id="dataStatus">Loading sample_-_superstore.xls...</span>
-      </div>
-    </section>
-
-    <section class="controls-card">
-      <div class="controls-header">
-        <div>
-          <p class="controls-label">Filters</p>
-          <h2>Refine the demo</h2>
-        </div>
+  <main class="dashboard-shell">
+    <header class="dashboard-header">
+      <div class="title-wrap">
+        <h1>KPI Card Viz Extension Demo</h1>
+        <span id="dataStatus" class="data-status">Loading sample_-_superstore.xls...</span>
       </div>
 
-      <div class="controls-grid">
-        <label class="control-field">
+      <div class="filters-row">
+        <label class="filter-field">
           <span>Region</span>
           <select id="regionFilter"></select>
         </label>
-        <label class="control-field">
-          <span>Segment</span>
-          <select id="segmentFilter"></select>
-        </label>
-        <label class="control-field">
+        <label class="filter-field">
           <span>Category</span>
           <select id="categoryFilter"></select>
         </label>
+        <label class="filter-field">
+          <span>Sub-Category</span>
+          <select id="subCategoryFilter"></select>
+        </label>
+        <label class="filter-field">
+          <span>State</span>
+          <select id="stateFilter"></select>
+        </label>
       </div>
-    </section>
+
+      <div class="page-nav">
+        <button class="page-btn active" data-page="0" type="button">Bar Chart</button>
+        <button class="page-btn" data-page="1" type="button">Line Chart</button>
+        <button class="page-btn" data-page="2" type="button">Waterfall</button>
+        <button class="page-btn" data-page="3" type="button">Radial</button>
+        <button class="page-btn" data-page="4" type="button">Funnel</button>
+      </div>
+    </header>
 
     <section id="cardsGrid" class="cards-grid"></section>
   </main>
+
+  <div id="chartTooltip" class="chart-tooltip"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="./app.js"></script>

@@ -2,12 +2,12 @@
 
 This folder contains a standalone website demo for `KPI Card`.
 
-It is intentionally separate from the Tableau extension runtime and mirrors the split-card view:
+It is intentionally separate from the Tableau extension runtime and mirrors the split-card dashboard view:
 
 - `Sales`
 - `Month of Order Date`
 - split by `Ship Mode`
-- filters kept for `Region`, `Segment`, and `Category`
+- filters kept for `Region`, `Category`, `Sub-Category`, and `State`
 
 ## Files
 
@@ -30,5 +30,10 @@ Important:
 
 - Filters: `Region`, `Segment`, `Category`
 - One card per `Ship Mode`
-- Each card shows KPI Summary + Bar Chart
-- Hover a bar inside a card to preview that month
+- Every page keeps the `KPI Summary` widget
+- Page 1: `Bar Chart`
+- Page 2: `Line Chart`
+- Page 3: `Waterfall`
+- Page 4: `Radial` broken by `Segment`
+- Page 5: `Funnel` using `Segment` as stages
+- Hover shows tooltips only
