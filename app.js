@@ -421,7 +421,7 @@
       var valueHeight = 18;
       var monthHeight = 18;
       var plotHeight = Math.max(chartHeight - monthHeight - 8, 120);
-      var topPad = valueHeight + 8;
+      var topPad = valueHeight + 14;
       var usableHeight = Math.max(plotHeight - topPad - 8, 40);
       columns.forEach(function (item) {
         item.plot.style.height = plotHeight + "px";
@@ -429,7 +429,7 @@
         var top = topPad + (usableHeight - barHeight);
         item.bar.style.top = top + "px";
         item.bar.style.height = barHeight + "px";
-        item.value.style.top = Math.max(0, top - valueHeight - 4) + "px";
+        item.value.style.top = Math.max(2, top - valueHeight - 2) + "px";
         item.value.style.bottom = "auto";
       });
     });
@@ -444,7 +444,7 @@
     requestAnimationFrame(function () { requestAnimationFrame(function () {
       var width = wrap.clientWidth || 360;
       var height = wrap.clientHeight || 320;
-      var pad = { top: 24, right: 18, bottom: 34, left: 28 };
+      var pad = { top: 34, right: 18, bottom: 34, left: 28 };
       var plotWidth = width - pad.left - pad.right;
       var plotHeight = height - pad.top - pad.bottom;
       var maxValue = Math.max.apply(null, months.map(function (month) { return month.sales; }).concat([1]));
@@ -484,7 +484,7 @@
         var py = Math.round(point.y);
         svgContent += '<circle cx="' + px + '" cy="' + py + '" r="4" fill="#4996b2"/>';
         svgContent += '<text class="line-axis-label" x="' + px + '" y="' + (height - 8) + '" text-anchor="middle">' + monthShortLabel(point.month.date) + "</text>";
-        svgContent += '<text class="line-value-label" x="' + px + '" y="' + Math.round(point.y - 18) + '" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
+        svgContent += '<text class="line-value-label" x="' + px + '" y="' + Math.round(point.y - 10) + '" text-anchor="middle">' + escapeHtml(formatCurrency(point.month.sales)) + "</text>";
         svgContent += '<circle class="line-hit" data-idx="' + points.indexOf(point) + '" cx="' + px + '" cy="' + py + '" r="12" fill="transparent"/>';
       });
 
@@ -655,13 +655,13 @@
       var width = wrap.clientWidth || 320;
       var height = wrap.clientHeight || 320;
       var svg = createSvg("svg");
-      var stroke = 12;
+      var stroke = 14;
       var stride = stroke + 12;
-      var labelAreaW = 162;
-      var outerRadius = Math.min(Math.floor((width - labelAreaW - 32) / 2), Math.floor((height - 24) / 2));
+      var labelAreaW = 120;
+      var outerRadius = Math.min(Math.floor((width - labelAreaW - 12) / 2), Math.floor((height - 8) / 2));
       var layoutWidth = labelAreaW + (outerRadius * 2);
-      var layoutLeft = Math.max(12, Math.round((width - layoutWidth) / 2));
-      var cx = layoutLeft + labelAreaW + outerRadius - 50;
+      var layoutLeft = Math.max(6, Math.round((width - layoutWidth) / 2));
+      var cx = layoutLeft + labelAreaW + outerRadius - 44;
       var cy = Math.round(height / 2);
       var maxValue = Math.max.apply(null, data.map(function (item) { return item.value; }).concat([1]));
       var totalValue = data.reduce(function (sum, item) { return sum + item.value; }, 0);
@@ -715,7 +715,7 @@
         var startX = cx;
         var startY = cy - radius;
         var labelY = Math.round(startY);
-        var dotCx = Math.round(startX - stroke / 2 - 26);
+        var dotCx = Math.round(startX - stroke / 2 - 22);
 
         var dot = createSvg("circle");
         dot.setAttribute("cx", String(dotCx));
@@ -726,7 +726,7 @@
         svg.appendChild(dot);
 
         var text = createSvg("text");
-        text.setAttribute("x", String(dotCx - 20));
+        text.setAttribute("x", String(dotCx - 18));
         text.setAttribute("y", String(labelY));
         text.setAttribute("text-anchor", "end");
         text.setAttribute("dominant-baseline", "middle");
