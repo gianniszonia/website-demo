@@ -425,7 +425,7 @@ body {
 }
 
 .widget-label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   fill: #666666;
   color: #666666;
@@ -437,7 +437,7 @@ body {
 }
 
 .line-axis-label {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   fill: #666666;
   font-family: var(--font);
@@ -448,7 +448,7 @@ body {
 }
 
 .line-value-label {
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 600;
   fill: #666666;
   font-family: var(--font);
@@ -459,7 +459,7 @@ body {
 }
 
 .radial-label {
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 600;
   fill: #666666;
   font-family: var(--font);
