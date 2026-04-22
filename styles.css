@@ -437,7 +437,7 @@ body {
 }
 
 .line-axis-label {
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 600;
   fill: #666666;
   font-family: var(--font);
@@ -448,8 +448,8 @@ body {
 }
 
 .line-value-label {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   fill: #666666;
   font-family: var(--font);
   letter-spacing: 0;
@@ -459,8 +459,8 @@ body {
 }
 
 .radial-label {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   fill: #666666;
   font-family: var(--font);
   letter-spacing: 0;
